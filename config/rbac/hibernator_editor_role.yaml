@@ -1,0 +1,24 @@
+# permissions for end users to edit hibernators.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: hibernator-editor-role
+rules:
+- apiGroups:
+  - pincher.devtron.ai
+  resources:
+  - hibernators
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - pincher.devtron.ai
+  resources:
+  - hibernators/status
+  verbs:
+  - get

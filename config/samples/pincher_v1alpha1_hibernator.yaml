@@ -1,0 +1,7 @@
+apiVersion: pincher.devtron.ai/v1alpha1
+kind: Hibernator
+metadata:
+  name: hibernator-sample
+spec:
+  # Add fields here
+  foo: bar

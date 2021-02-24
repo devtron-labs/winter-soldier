@@ -1,0 +1,7 @@
+domain: devtron.ai
+repo: github.com/devtron-labs/winter-soldier
+resources:
+- group: pincher
+  kind: Hibernator
+  version: v1alpha1
+version: "2"
