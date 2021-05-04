@@ -28,14 +28,79 @@ type HibernatorSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of Hibernator. Edit Hibernator_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	TimeRangesWithZone           TimeRangesWithZone `json:"time_ranges_with_zone"`
+	Rules                        []Rule             `json:"rules"`
+	UnHibernate                  bool               `json:"reset,omitempty"`
+	CanUnHibernateObjectManually bool               `json:"can_un_hibernate_object_manually"`
+	Pause                        bool               `json:"pause"`
+	PauseUntil                   TimeRange          `json:"pause_until"`
+}
+
+type Rule struct {
+	Inclusions  []Selector `json:"inclusions"`
+	Exclusions  []Selector `json:"exclusions"`
+	Action      `json:"action"`
+	DeleteStore bool `json:"delete_store"`
+}
+
+type TimeRangesWithZone struct {
+	TimeRanges []TimeRange `json:"time_ranges"`
+	TimeZone   string      `json:"timezone,omitempty"`
+}
+
+type TimeRange struct {
+	TimeZone       string  `json:"timezone,omitempty"`
+	TimeFrom       string  `json:"time_from"`
+	TimeTo         string  `json:"time_to"`
+	CronExpression string  `json:"cron_expression"`
+	WeekdayFrom    Weekday `json:"weekday_from"`
+	WeekdayTo      Weekday `json:"weekday_to"`
+}
+
+type Selector struct {
+	Labels        []string `json:"labels"`
+	Name          string   `json:"name"`
+	Namespace     string   `json:"namespace"`
+	Type          string   `json:"type"`
+	FieldSelector []string `json:"field_selector"`
 }
 
 // HibernatorStatus defines the observed state of Hibernator
 type HibernatorStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	History       []RevisionHistory `json:"history"`
+	Status        string            `json:"status"`
+	Message       string            `json:"message"`
+	IsHibernating bool              `json:"is_hibernating"`
+}
+
+type ImpactedObject struct {
+	Group                string `json:"group"`
+	Version              string `json:"version"`
+	Kind                 string `json:"kind"`
+	Name                 string `json:"name"`
+	Namespace            string `json:"namespace"`
+	OriginalCount        int64  `json:"original_count"`
+	RelatedDeletedObject string `json:"related_deleted_object"`
+	Message              string `json:"message"`
+	Status               string `json:"status"`
+}
+
+type ExcludedObject struct {
+	Group     string `json:"group"`
+	Version   string `json:"version"`
+	Kind      string `json:"kind"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace"`
+	Reason    string `json:"reason"`
+}
+
+type RevisionHistory struct {
+	Time            metav1.Time      `json:"time"`
+	ID              int64            `json:"id"`
+	ImpactedObjects []ImpactedObject `json:"impacted_objects"`
+	ExcludedObjects []ExcludedObject `json:"excluded_objects"`
 }
 
 // +kubebuilder:object:root=true
@@ -58,6 +123,25 @@ type HibernatorList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []Hibernator `json:"items"`
 }
+
+type Action string
+
+const (
+	Delete Action = "delete"
+	Sleep  Action = "sleep"
+)
+
+type Weekday string
+
+const (
+	Sun = "Sun"
+	Mon = "Mon"
+	Tue = "Tue"
+	Wed = "Wed"
+	Thu = "Thu"
+	Fri = "Fri"
+	Sat = "Sat"
+)
 
 func init() {
 	SchemeBuilder.Register(&Hibernator{}, &HibernatorList{})

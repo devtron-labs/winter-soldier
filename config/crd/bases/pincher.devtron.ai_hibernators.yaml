@@ -1,0 +1,205 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: hibernators.pincher.devtron.ai
+spec:
+  group: pincher.devtron.ai
+  names:
+    kind: Hibernator
+    listKind: HibernatorList
+    plural: hibernators
+    singular: hibernator
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: Hibernator is the Schema for the hibernators API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: HibernatorSpec defines the desired state of Hibernator
+          properties:
+            can_un_hibernate_object_manually:
+              type: boolean
+            reset:
+              type: boolean
+            rules:
+              description: Foo is an example field of Hibernator. Edit Hibernator_types.go
+                to remove/update
+              items:
+                properties:
+                  action:
+                    type: string
+                  exclusions:
+                    items:
+                      properties:
+                        labels:
+                          items:
+                            type: string
+                          type: array
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - labels
+                      - name
+                      - namespace
+                      - type
+                      type: object
+                    type: array
+                  inclusions:
+                    items:
+                      properties:
+                        labels:
+                          items:
+                            type: string
+                          type: array
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - labels
+                      - name
+                      - namespace
+                      - type
+                      type: object
+                    type: array
+                  ranges:
+                    items:
+                      properties:
+                        cron_expression:
+                          type: string
+                        from:
+                          type: string
+                        timezone:
+                          type: string
+                        to:
+                          type: string
+                        weekday_from:
+                          type: string
+                        weekday_to:
+                          type: string
+                      required:
+                      - cron_expression
+                      - from
+                      - to
+                      - weekday_from
+                      - weekday_to
+                      type: object
+                    type: array
+                required:
+                - action
+                - exclusions
+                - inclusions
+                - ranges
+                type: object
+              type: array
+            timezone:
+              type: string
+          required:
+          - can_un_hibernate_object_manually
+          - rules
+          type: object
+        status:
+          description: HibernatorStatus defines the observed state of Hibernator
+          properties:
+            history:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              items:
+                properties:
+                  excluded_objects:
+                    items:
+                      properties:
+                        group:
+                          type: string
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        reason:
+                          type: string
+                        version:
+                          type: string
+                      required:
+                      - group
+                      - kind
+                      - name
+                      - namespace
+                      - reason
+                      - version
+                      type: object
+                    type: array
+                  id:
+                    format: int64
+                    type: integer
+                  impacted_objects:
+                    items:
+                      properties:
+                        group:
+                          type: string
+                        kind:
+                          type: string
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                        version:
+                          type: string
+                      required:
+                      - group
+                      - kind
+                      - name
+                      - namespace
+                      - version
+                      type: object
+                    type: array
+                  time:
+                    format: date-time
+                    type: string
+                required:
+                - excluded_objects
+                - id
+                - impacted_objects
+                - time
+                type: object
+              type: array
+          required:
+          - history
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

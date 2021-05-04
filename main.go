@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"github.com/devtron-labs/winter-soldier/pkg"
 	"os"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -68,9 +69,11 @@ func main() {
 	}
 
 	if err = (&controllers.HibernatorReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Hibernator"),
-		Scheme: mgr.GetScheme(),
+		Client:  mgr.GetClient(),
+		Log:     ctrl.Log.WithName("controllers").WithName("Hibernator"),
+		Scheme:  mgr.GetScheme(),
+		kubectl: pkg.NewKubectl(),
+		mapper:  pkg.NewMapperFactory(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Hibernator")
 		os.Exit(1)
