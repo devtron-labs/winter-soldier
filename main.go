@@ -72,8 +72,8 @@ func main() {
 		Client:  mgr.GetClient(),
 		Log:     ctrl.Log.WithName("controllers").WithName("Hibernator"),
 		Scheme:  mgr.GetScheme(),
-		kubectl: pkg.NewKubectl(),
-		mapper:  pkg.NewMapperFactory(),
+		Kubectl: pkg.NewKubectl(),
+		Mapper:  pkg.NewMapperFactory(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Hibernator")
 		os.Exit(1)

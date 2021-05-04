@@ -56,8 +56,8 @@ func TestHibernatorReconciler_handleLabelSelector(t *testing.T) {
 				Client:  tt.fields.Client,
 				Log:     tt.fields.Log,
 				Scheme:  tt.fields.Scheme,
-				kubectl: tt.fields.kubectl,
-				mapper:  tt.fields.mapper,
+				Kubectl: tt.fields.kubectl,
+				Mapper:  tt.fields.mapper,
 			}
 			got, err := r.handleLabelSelector(tt.args.rule)
 			fmt.Println(got)
@@ -137,8 +137,8 @@ func TestHibernatorReconciler_handleFieldSelector(t *testing.T) {
 				Client:  tt.fields.Client,
 				Log:     tt.fields.Log,
 				Scheme:  tt.fields.Scheme,
-				kubectl: tt.fields.kubectl,
-				mapper:  tt.fields.mapper,
+				Kubectl: tt.fields.kubectl,
+				Mapper:  tt.fields.mapper,
 			}
 			got, err := r.handleFieldSelector(tt.args.rule)
 			if (err != nil) != tt.wantErr {

@@ -99,6 +99,7 @@ type ExcludedObject struct {
 type RevisionHistory struct {
 	Time            metav1.Time      `json:"time"`
 	ID              int64            `json:"id"`
+	Hibernate       bool             `json:"hibernate"`
 	ImpactedObjects []ImpactedObject `json:"impacted_objects"`
 	ExcludedObjects []ExcludedObject `json:"excluded_objects"`
 }

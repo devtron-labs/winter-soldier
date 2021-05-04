@@ -12,7 +12,7 @@ import (
 )
 
 func (r *HibernatorReconciler) handleLabelSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
-	factory := pkg.NewFactory(r.mapper)
+	factory := pkg.NewFactory(r.Mapper)
 	resourceMapping, err := factory.MappingFor(rule.Type)
 	if err != nil {
 		return nil, err
@@ -24,7 +24,7 @@ func (r *HibernatorReconciler) handleLabelSelector(rule pincherv1alpha1.Selector
 			LabelSelector: strings.Join(rule.Labels, ","),
 		},
 	}
-	resp, err := r.kubectl.ListResources(context.Background(), request)
+	resp, err := r.Kubectl.ListResources(context.Background(), request)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (r *HibernatorReconciler) handleFieldSelector(rule pincherv1alpha1.Selector
 }
 
 func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
-	factory := pkg.NewFactory(r.mapper)
+	factory := pkg.NewFactory(r.Mapper)
 	resourceMapping, err := factory.MappingFor(rule.Type)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]
 			Namespace:        rule.Namespace,
 			GroupVersionKind: resourceMapping.GroupVersionKind,
 		}
-		resp, err := r.kubectl.GetResource(context.Background(), request)
+		resp, err := r.Kubectl.GetResource(context.Background(), request)
 		if err != nil {
 			return nil, err
 		}
@@ -93,7 +93,7 @@ func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]
 			GroupVersionResource: resourceMapping.Resource,
 			ListOptions:          metav1.ListOptions{},
 		}
-		resp, err := r.kubectl.ListResources(context.Background(), request)
+		resp, err := r.Kubectl.ListResources(context.Background(), request)
 		if err != nil {
 			return nil, err
 		}

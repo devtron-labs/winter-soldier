@@ -21,9 +21,10 @@ import (
 	"fmt"
 	"github.com/devtron-labs/winter-soldier/pkg"
 	"github.com/tidwall/gjson"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"math"
 	"time"
@@ -41,8 +42,8 @@ type HibernatorReconciler struct {
 	client.Client
 	Log     logr.Logger
 	Scheme  *runtime.Scheme
-	kubectl pkg.KubectlCmd
-	mapper  *pkg.Mapper
+	Kubectl pkg.KubectlCmd
+	Mapper  *pkg.Mapper
 }
 
 const patch = `[{"op": "replace", "path": "/spec/replicas", "value":%d}]`
@@ -66,8 +67,11 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		hibernator.Status.Message = err.Error()
 	}
 	if !inRange && hibernator.Status.IsHibernating {
-		hibernator.Status.IsHibernating = false
-		r.Client.Update(context.Background(), &hibernator)
+		finalHibernator, err := r.unhibernate(hibernator)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		r.Client.Update(context.Background(), finalHibernator)
 		return ctrl.Result{
 			RequeueAfter: time.Duration(timeGap) * time.Minute,
 		}, nil
@@ -87,15 +91,56 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	return ctrl.Result{}, nil
 }
 
+func (r *HibernatorReconciler) unhibernate(hibernator pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, error) {
+	hibernator.Status.IsHibernating = false
+	latestHistory := r.getLatestHistory(hibernator.Status.History)
+	if latestHistory.Hibernate == false {
+		return &hibernator, nil
+	}
+	var impactedObjects []pincherv1alpha1.ImpactedObject
+	for _, impactedObject := range latestHistory.ImpactedObjects {
+		impactedObject = pincherv1alpha1.ImpactedObject{
+			Group:         impactedObject.Group,
+			Version:       impactedObject.Version,
+			Kind:          impactedObject.Kind,
+			Name:          impactedObject.Name,
+			Namespace:     impactedObject.Namespace,
+			OriginalCount: impactedObject.OriginalCount,
+			Status:        "success",
+		}
+		objectPatch := fmt.Sprintf(patch, impactedObject.OriginalCount)
+		request := &pkg.PatchRequest{
+			Name:      impactedObject.Name,
+			Namespace: impactedObject.Namespace,
+			GroupVersionKind: schema.GroupVersionKind{
+				Group:   impactedObject.Group,
+				Version: impactedObject.Version,
+				Kind:    impactedObject.Kind,
+			},
+			Patch:     objectPatch,
+			PatchType: string(types.JSONPatchType),
+		}
+		_, err := r.Kubectl.PatchResource(context.Background(), request)
+		if err != nil {
+			fmt.Printf("error err %v while deleting object %v\n", err, *request)
+			impactedObject.Status = "error"
+			impactedObject.Message = err.Error()
+		}
+		impactedObjects = append(impactedObjects, impactedObject)
+	}
+	history := pincherv1alpha1.RevisionHistory{
+		Time:            metav1.Time{Time: time.Now()},
+		ID:              r.getNewRevisionID(hibernator.Status.History),
+		Hibernate:       true,
+		ImpactedObjects: impactedObjects,
+		ExcludedObjects: []pincherv1alpha1.ExcludedObject{},
+	}
+	hibernator.Status.History = r.addToHistory(history, hibernator.Status.History)
+	return &hibernator, nil
+}
+
 func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, error) {
 	hibernator.Status.IsHibernating = true
-	//TODO: check if hibernated then unhibernate
-	factory := pkg.NewFactory(r.mapper)
-	mapping, err := factory.MappingFor("hpa")
-	if err != nil {
-		fmt.Println("error fetching mapping for hpa")
-		return nil, err
-	}
 	var impactedObjects []pincherv1alpha1.ImpactedObject
 	var excludedObjects []pincherv1alpha1.ExcludedObject
 	patchZero := fmt.Sprintf(patch, 0)
@@ -103,8 +148,7 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 		inclusions := r.getMatchingObjects(rule.Inclusions)
 		exclusions := r.getMatchingObjects(rule.Exclusions)
 		included, excluded := r.getFinalIncludedObjects(inclusions, exclusions)
-		hpaTargetObjectPairs := r.fetchHPATargetObjectPairForObjects(included, mapping)
-		//TODO: delete HPA, change target object size to 0 and store original size and hpa manifest, store hpa
+		//hpaTargetObjectPairs := r.fetchHPATargetObjectPairForObjects(included, mapping)
 		for _, ex := range excluded {
 			excludedObject := pincherv1alpha1.ExcludedObject{
 				Group:     ex.GroupVersionKind().Group,
@@ -115,37 +159,45 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 			}
 			excludedObjects = append(excludedObjects, excludedObject)
 		}
-		for _, pair := range hpaTargetObjectPairs {
-			to, err := pair.TargetObject.MarshalJSON()
+		for _, inc := range included {
+			to, err := inc.MarshalJSON()
 			if err != nil {
 				continue
 			}
 			res := gjson.Get(string(to), "spec.replicas")
 			impactedObject := pincherv1alpha1.ImpactedObject{
-				Group:         pair.TargetObject.GroupVersionKind().Group,
-				Version:       pair.TargetObject.GroupVersionKind().Version,
-				Kind:          pair.TargetObject.GroupVersionKind().Kind,
-				Name:          pair.TargetObject.GetName(),
-				Namespace:     pair.TargetObject.GetNamespace(),
+				Group:         inc.GroupVersionKind().Group,
+				Version:       inc.GroupVersionKind().Version,
+				Kind:          inc.GroupVersionKind().Kind,
+				Name:          inc.GetName(),
+				Namespace:     inc.GetNamespace(),
 				OriginalCount: res.Int(),
+				Status:        "success",
 			}
-			if pair.HPA != nil {
+			if rule.Action == "sleep" {
+				request := &pkg.PatchRequest{
+					Name:             inc.GetName(),
+					Namespace:        inc.GetNamespace(),
+					GroupVersionKind: inc.GroupVersionKind(),
+					Patch:            patchZero,
+					PatchType:        string(types.JSONPatchType),
+				}
+				_, err = r.Kubectl.PatchResource(context.Background(), request)
+				if err != nil {
+					fmt.Printf("error err %v while deleting object %v\n", err, *request)
+					impactedObject.Status = "error"
+					impactedObject.Message = err.Error()
+					impactedObjects = append(impactedObjects, impactedObject)
+					continue
+				}
+			} else {
 				request := &pkg.DeleteRequest{
-					Name:             pair.HPA.GetName(),
-					Namespace:        pair.HPA.GetNamespace(),
-					GroupVersionKind: pair.HPA.GroupVersionKind(),
+					Name:             inc.GetName(),
+					Namespace:        inc.GetNamespace(),
+					GroupVersionKind: inc.GroupVersionKind(),
 					Force:            pointer.BoolPtr(true),
 				}
-				resp, err := r.kubectl.DeleteResource(context.Background(), request)
-				if err != nil {
-					//TODO: set event
-					fmt.Printf("error err %v while deleting object %v\n", err, *request)
-					impactedObject.Status = "error"
-					impactedObject.Message = err.Error()
-					impactedObjects = append(impactedObjects, impactedObject)
-					continue
-				}
-				deletedObject, err := resp.Manifest.MarshalJSON()
+				resp, err := r.Kubectl.DeleteResource(context.Background(), request)
 				if err != nil {
 					fmt.Printf("error err %v while deleting object %v\n", err, *request)
 					impactedObject.Status = "error"
@@ -153,23 +205,10 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 					impactedObjects = append(impactedObjects, impactedObject)
 					continue
 				}
-				impactedObject.RelatedDeletedObject = string(deletedObject)
+				j, _ := resp.Manifest.MarshalJSON()
+				impactedObject.RelatedDeletedObject = string(j)
 			}
-			request := &pkg.PatchRequest{
-				Name:             pair.TargetObject.GetName(),
-				Namespace:        pair.TargetObject.GetNamespace(),
-				GroupVersionKind: pair.TargetObject.GroupVersionKind(),
-				Patch:            patchZero,
-				PatchType:        "application/json-patch+json",
-			}
-			_, err = r.kubectl.PatchResource(context.Background(), request)
-			if err != nil {
-				fmt.Printf("error err %v while deleting object %v\n", err, *request)
-				impactedObject.Status = "error"
-				impactedObject.Message = err.Error()
-				impactedObjects = append(impactedObjects, impactedObject)
-				continue
-			}
+
 			impactedObject.Status = "success"
 			impactedObjects = append(impactedObjects, impactedObject)
 		}
@@ -177,7 +216,8 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 
 	history := pincherv1alpha1.RevisionHistory{
 		Time:            metav1.Time{Time: time.Now()},
-		ID:              r.getRevisionID(hibernator.Status.History),
+		ID:              r.getNewRevisionID(hibernator.Status.History),
+		Hibernate:       true,
 		ImpactedObjects: impactedObjects,
 		ExcludedObjects: excludedObjects,
 	}
@@ -207,7 +247,23 @@ func (r *HibernatorReconciler) addToHistory(history pincherv1alpha1.RevisionHist
 
 }
 
-func (r *HibernatorReconciler) getRevisionID(revisionHistories []pincherv1alpha1.RevisionHistory) int64 {
+func (r *HibernatorReconciler) getLatestHistory(revisionHistories []pincherv1alpha1.RevisionHistory) pincherv1alpha1.RevisionHistory {
+	maxID := int64(-1)
+	for _, history := range revisionHistories {
+		if history.ID > maxID {
+			maxID = history.ID
+		}
+	}
+	var latestHistory pincherv1alpha1.RevisionHistory
+	for _, history := range revisionHistories {
+		if history.ID == maxID {
+			latestHistory = history
+		}
+	}
+	return latestHistory
+}
+
+func (r *HibernatorReconciler) getNewRevisionID(revisionHistories []pincherv1alpha1.RevisionHistory) int64 {
 	maxID := int64(-1)
 	for _, history := range revisionHistories {
 		if history.ID > maxID {
@@ -215,83 +271,6 @@ func (r *HibernatorReconciler) getRevisionID(revisionHistories []pincherv1alpha1
 		}
 	}
 	return maxID + 1
-}
-
-func (r *HibernatorReconciler) fetchHPATargetObjectPairForObjects(included []unstructured.Unstructured, mapping *meta.RESTMapping) []TargetObjectHPAPair {
-	var hpas []unstructured.Unstructured
-	namespaces := map[string]bool{}
-
-	for _, inc := range included {
-		namespaces[inc.GetNamespace()] = true
-	}
-	for k, _ := range namespaces {
-		request := &pkg.ListRequest{
-			Namespace:            k,
-			GroupVersionResource: mapping.Resource,
-			ListOptions:          metav1.ListOptions{},
-		}
-		namespaceHPA, err := r.kubectl.ListResources(context.Background(), request)
-		if err != nil {
-			continue
-		}
-		hpas = append(hpas, namespaceHPA.Manifests...)
-	}
-	return r.createHPAAndTargetObjectMapping(hpas, included)
-
-}
-
-func (r *HibernatorReconciler) createHPAAndTargetObjectMapping(hpas, targetObjects []unstructured.Unstructured) []TargetObjectHPAPair {
-	targetObjectsKeys := map[string]*unstructured.Unstructured{}
-	matchedHPA := map[string]bool{}
-	for i := 0; i < len(targetObjects); i++ {
-		inc := targetObjects[i]
-		key := getKeyForHPATargetObjectMapping(inc.GetNamespace(), inc.GetAPIVersion(), inc.GetKind(), inc.GetName())
-		targetObjectsKeys[key] = &inc
-	}
-	var targetObjectHPAPairs []TargetObjectHPAPair
-	for _, manifest := range hpas {
-		targetKey := r.getHPATargetRefKey(manifest)
-		if to, ok := targetObjectsKeys[targetKey]; ok {
-			matchedHPA[targetKey] = true
-			toHPA := TargetObjectHPAPair{
-				TargetObject: to,
-				HPA:          &manifest,
-			}
-			targetObjectHPAPairs = append(targetObjectHPAPairs, toHPA)
-		}
-	}
-	for k, v := range targetObjectsKeys {
-		if !matchedHPA[k] {
-			toHPA := TargetObjectHPAPair{
-				TargetObject: v,
-			}
-			targetObjectHPAPairs = append(targetObjectHPAPairs, toHPA)
-		}
-	}
-	return targetObjectHPAPairs
-}
-
-func getKeyForHPATargetObjectMapping(namespace, apiVersion, kind, name string) string {
-	return fmt.Sprintf("/%s/%s/%s/%s", namespace, apiVersion, kind, name)
-}
-
-func (r *HibernatorReconciler) getHPATargetRefKey(hpa unstructured.Unstructured) string {
-	specInterface := hpa.Object["spec"]
-	spec := specInterface.(map[string]interface{})
-	scaleTargetRefInterface := spec["scaleTargetRef"]
-	scaleTargetRef := scaleTargetRefInterface.(map[string]interface{})
-	apiVersion, kind, name := "", "", ""
-	if av, ok := scaleTargetRef["apiVersion"]; ok {
-		apiVersion = av.(string)
-	}
-	if k, ok := scaleTargetRef["kind"]; ok {
-		kind = k.(string)
-	}
-	if n, ok := scaleTargetRef["name"]; ok {
-		name = n.(string)
-	}
-	namespace := hpa.GetNamespace()
-	return getKeyForHPATargetObjectMapping(namespace, apiVersion, kind, name)
 }
 
 func (r *HibernatorReconciler) getMatchingObjects(selectors []pincherv1alpha1.Selector) []unstructured.Unstructured {
