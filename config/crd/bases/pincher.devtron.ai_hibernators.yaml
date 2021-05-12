@@ -36,18 +36,44 @@ spec:
           properties:
             can_un_hibernate_object_manually:
               type: boolean
+            pause:
+              type: boolean
+            pause_until:
+              properties:
+                cron_expression:
+                  type: string
+                time_from:
+                  type: string
+                time_to:
+                  type: string
+                timezone:
+                  type: string
+                weekday_from:
+                  type: string
+                weekday_to:
+                  type: string
+              required:
+              - time_from
+              - time_to
+              - weekday_from
+              - weekday_to
+              type: object
             reset:
               type: boolean
             rules:
-              description: Foo is an example field of Hibernator. Edit Hibernator_types.go
-                to remove/update
               items:
                 properties:
                   action:
                     type: string
+                  delete_store:
+                    type: boolean
                   exclusions:
                     items:
                       properties:
+                        field_selector:
+                          items:
+                            type: string
+                          type: array
                         labels:
                           items:
                             type: string
@@ -59,8 +85,6 @@ spec:
                         type:
                           type: string
                       required:
-                      - labels
-                      - name
                       - namespace
                       - type
                       type: object
@@ -68,6 +92,10 @@ spec:
                   inclusions:
                     items:
                       properties:
+                        field_selector:
+                          items:
+                            type: string
+                          type: array
                         labels:
                           items:
                             type: string
@@ -79,46 +107,45 @@ spec:
                         type:
                           type: string
                       required:
-                      - labels
-                      - name
                       - namespace
                       - type
                       type: object
                     type: array
-                  ranges:
-                    items:
-                      properties:
-                        cron_expression:
-                          type: string
-                        from:
-                          type: string
-                        timezone:
-                          type: string
-                        to:
-                          type: string
-                        weekday_from:
-                          type: string
-                        weekday_to:
-                          type: string
-                      required:
-                      - cron_expression
-                      - from
-                      - to
-                      - weekday_from
-                      - weekday_to
-                      type: object
-                    type: array
                 required:
                 - action
-                - exclusions
                 - inclusions
-                - ranges
                 type: object
               type: array
-            timezone:
-              type: string
+            time_ranges_with_zone:
+              properties:
+                time_ranges:
+                  items:
+                    properties:
+                      cron_expression:
+                        type: string
+                      time_from:
+                        type: string
+                      time_to:
+                        type: string
+                      timezone:
+                        type: string
+                      weekday_from:
+                        type: string
+                      weekday_to:
+                        type: string
+                    required:
+                    - time_from
+                    - time_to
+                    - weekday_from
+                    - weekday_to
+                    type: object
+                  type: array
+                timezone:
+                  type: string
+              required:
+              - time_ranges
+              type: object
           required:
-          - can_un_hibernate_object_manually
           - rules
           type: object
         status:
@@ -154,6 +181,8 @@ spec:
                       - version
                       type: object
                     type: array
+                  hibernate:
+                    type: boolean
                   id:
                     format: int64
                     type: integer
@@ -164,17 +193,30 @@ spec:
                           type: string
                         kind:
                           type: string
+                        message:
+                          type: string
                         name:
                           type: string
                         namespace:
+                          type: string
+                        original_count:
+                          format: int64
+                          type: integer
+                        related_deleted_object:
+                          type: string
+                        status:
                           type: string
                         version:
                           type: string
                       required:
                       - group
                       - kind
+                      - message
                       - name
                       - namespace
+                      - original_count
+                      - related_deleted_object
+                      - status
                       - version
                       type: object
                     type: array
@@ -183,13 +225,23 @@ spec:
                     type: string
                 required:
                 - excluded_objects
+                - hibernate
                 - id
                 - impacted_objects
                 - time
                 type: object
               type: array
+            is_hibernating:
+              type: boolean
+            message:
+              type: string
+            status:
+              type: string
           required:
           - history
+          - is_hibernating
+          - message
+          - status
           type: object
       type: object
   version: v1alpha1

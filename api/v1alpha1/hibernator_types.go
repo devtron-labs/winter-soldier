@@ -28,19 +28,19 @@ type HibernatorSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	TimeRangesWithZone           TimeRangesWithZone `json:"time_ranges_with_zone"`
+	TimeRangesWithZone           TimeRangesWithZone `json:"time_ranges_with_zone,omitempty"`
 	Rules                        []Rule             `json:"rules"`
 	UnHibernate                  bool               `json:"reset,omitempty"`
-	CanUnHibernateObjectManually bool               `json:"can_un_hibernate_object_manually"`
-	Pause                        bool               `json:"pause"`
-	PauseUntil                   TimeRange          `json:"pause_until"`
+	CanUnHibernateObjectManually bool               `json:"can_un_hibernate_object_manually,omitempty"`
+	Pause                        bool               `json:"pause,omitempty"`
+	PauseUntil                   TimeRange          `json:"pause_until,omitempty"`
 }
 
 type Rule struct {
 	Inclusions  []Selector `json:"inclusions"`
-	Exclusions  []Selector `json:"exclusions"`
+	Exclusions  []Selector `json:"exclusions,omitempty"`
 	Action      `json:"action"`
-	DeleteStore bool `json:"delete_store"`
+	DeleteStore bool `json:"delete_store,omitempty"`
 }
 
 type TimeRangesWithZone struct {
@@ -52,17 +52,17 @@ type TimeRange struct {
 	TimeZone       string  `json:"timezone,omitempty"`
 	TimeFrom       string  `json:"time_from"`
 	TimeTo         string  `json:"time_to"`
-	CronExpression string  `json:"cron_expression"`
+	CronExpression string  `json:"cron_expression,omitempty"`
 	WeekdayFrom    Weekday `json:"weekday_from"`
 	WeekdayTo      Weekday `json:"weekday_to"`
 }
 
 type Selector struct {
-	Labels        []string `json:"labels"`
-	Name          string   `json:"name"`
+	Labels        []string `json:"labels,omitempty"`
+	Name          string   `json:"name,omitempty"`
 	Namespace     string   `json:"namespace"`
 	Type          string   `json:"type"`
-	FieldSelector []string `json:"field_selector"`
+	FieldSelector []string `json:"field_selector,omitempty"`
 }
 
 // HibernatorStatus defines the observed state of Hibernator

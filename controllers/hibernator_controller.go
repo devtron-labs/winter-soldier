@@ -66,29 +66,23 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		hibernator.Status.Status = "Failed"
 		hibernator.Status.Message = err.Error()
 	}
-	if !inRange && hibernator.Status.IsHibernating {
+	if (!inRange || (inRange && timeGap <= 1)) && hibernator.Status.IsHibernating {
 		finalHibernator, err := r.unhibernate(hibernator)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		r.Client.Update(context.Background(), finalHibernator)
-		return ctrl.Result{
-			RequeueAfter: time.Duration(timeGap) * time.Minute,
-		}, nil
-	} else if inRange && !hibernator.Status.IsHibernating {
+	} else if (inRange || (!inRange && timeGap <= 1)) && !hibernator.Status.IsHibernating {
 		finalHibernator, err := r.hibernate(hibernator)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		r.Client.Update(context.Background(), finalHibernator)
-		//hibernator.Status.IsHibernating = true
-		//TODO: check if unhibernated then hibernate
-		return ctrl.Result{
-			RequeueAfter: time.Duration(timeGap) * time.Minute,
-		}, nil
 	}
-
-	return ctrl.Result{}, nil
+	requeTime := time.Duration(timeGap) * time.Minute
+	return ctrl.Result{
+		RequeueAfter: requeTime,
+	}, nil
 }
 
 func (r *HibernatorReconciler) unhibernate(hibernator pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, error) {
@@ -131,7 +125,7 @@ func (r *HibernatorReconciler) unhibernate(hibernator pincherv1alpha1.Hibernator
 	history := pincherv1alpha1.RevisionHistory{
 		Time:            metav1.Time{Time: time.Now()},
 		ID:              r.getNewRevisionID(hibernator.Status.History),
-		Hibernate:       true,
+		Hibernate:       false,
 		ImpactedObjects: impactedObjects,
 		ExcludedObjects: []pincherv1alpha1.ExcludedObject{},
 	}

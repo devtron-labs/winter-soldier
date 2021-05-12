@@ -71,6 +71,7 @@ func (r *HibernatorReconciler) handleFieldSelector(rule pincherv1alpha1.Selector
 
 func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
 	factory := pkg.NewFactory(r.Mapper)
+	//types := strings.Split(rule.Type, ",")
 	resourceMapping, err := factory.MappingFor(rule.Type)
 	if err != nil {
 		return nil, err
@@ -85,7 +86,7 @@ func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]
 		if err != nil {
 			return nil, err
 		}
-		fmt.Println(resp.Manifest)
+		//fmt.Println(resp.Manifest)
 		return []unstructured.Unstructured{resp.Manifest}, nil
 	} else {
 		request := &pkg.ListRequest{
@@ -97,9 +98,9 @@ func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]
 		if err != nil {
 			return nil, err
 		}
-		for _, manifest := range resp.Manifests {
-			fmt.Println(manifest)
-		}
+		//for _, manifest := range resp.Manifests {
+		//	fmt.Println(manifest)
+		//}
 		return resp.Manifests, nil
 	}
 	return nil, nil
