@@ -62,9 +62,17 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	now := time.Now()
 	timeRangeWithZone := hibernator.Spec.TimeRangesWithZone
 	timeGap, inRange, err := timeRangeWithZone.NearestTimeGap(now)
+	requeTime := time.Duration(timeGap) * time.Minute
 	if err != nil {
 		hibernator.Status.Status = "Failed"
 		hibernator.Status.Message = err.Error()
+	}
+	latestHistory := r.getLatestHistory(hibernator.Status.History)
+	timeElapsedSinceLastRun := time.Now().Sub(latestHistory.Time.Time)
+	if timeElapsedSinceLastRun.Minutes() <= 1 {
+		return ctrl.Result{
+			RequeueAfter: requeTime,
+		}, nil
 	}
 	if (!inRange || (inRange && timeGap <= 1)) && hibernator.Status.IsHibernating {
 		finalHibernator, err := r.unhibernate(hibernator)
@@ -79,7 +87,7 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		}
 		r.Client.Update(context.Background(), finalHibernator)
 	}
-	requeTime := time.Duration(timeGap) * time.Minute
+
 	return ctrl.Result{
 		RequeueAfter: requeTime,
 	}, nil

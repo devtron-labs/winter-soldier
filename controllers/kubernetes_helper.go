@@ -71,26 +71,64 @@ func (r *HibernatorReconciler) handleFieldSelector(rule pincherv1alpha1.Selector
 
 func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
 	factory := pkg.NewFactory(r.Mapper)
-	//types := strings.Split(rule.Type, ",")
-	resourceMapping, err := factory.MappingFor(rule.Type)
+	types := strings.Split(rule.Type, ",")
+	namespaces, err := r.getNamespaces(rule, factory)
 	if err != nil {
 		return nil, err
 	}
 	if len(rule.Name) > 0 {
-		request := &pkg.GetRequest{
-			Name:             rule.Name,
-			Namespace:        rule.Namespace,
-			GroupVersionKind: resourceMapping.GroupVersionKind,
+		var manifests []unstructured.Unstructured
+		for _, namespace := range namespaces {
+			for _, t := range types {
+				resourceMapping, err := factory.MappingFor(t)
+				if err != nil {
+					return nil, err
+				}
+				request := &pkg.GetRequest{
+					Name:             rule.Name,
+					Namespace:        namespace,
+					GroupVersionKind: resourceMapping.GroupVersionKind,
+				}
+				resp, err := r.Kubectl.GetResource(context.Background(), request)
+				if err != nil {
+					continue
+				}
+				manifests = append(manifests, resp.Manifest)
+			}
 		}
-		resp, err := r.Kubectl.GetResource(context.Background(), request)
-		if err != nil {
-			return nil, err
-		}
-		//fmt.Println(resp.Manifest)
-		return []unstructured.Unstructured{resp.Manifest}, nil
+		return manifests, nil
 	} else {
+		var manifests []unstructured.Unstructured
+		for _, namespace := range namespaces {
+			for _, t := range types{
+				resourceMapping, err := factory.MappingFor(t)
+				if err != nil {
+					return nil, err
+				}
+				request := &pkg.ListRequest{
+					Namespace:            namespace,
+					GroupVersionResource: resourceMapping.Resource,
+					ListOptions:          metav1.ListOptions{},
+				}
+				resp, err := r.Kubectl.ListResources(context.Background(), request)
+				if err != nil {
+					continue
+				}
+				for _, m := range resp.Manifests {
+					manifests = append(manifests, m)
+				}
+			}
+		}
+		return manifests, nil
+	}
+	return nil, nil
+}
+
+func (r *HibernatorReconciler) getNamespaces(rule pincherv1alpha1.Selector, factory *pkg.ArgsProcessor) ([]string, error) {
+	var namespaces []string
+	if rule.Namespace == "all" || len(rule.Namespace) == 0 {
+		resourceMapping, _ := factory.MappingFor("ns")
 		request := &pkg.ListRequest{
-			Namespace:            rule.Namespace,
 			GroupVersionResource: resourceMapping.Resource,
 			ListOptions:          metav1.ListOptions{},
 		}
@@ -98,10 +136,11 @@ func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]
 		if err != nil {
 			return nil, err
 		}
-		//for _, manifest := range resp.Manifests {
-		//	fmt.Println(manifest)
-		//}
-		return resp.Manifests, nil
+		for _, manifest := range resp.Manifests {
+			namespaces = append(namespaces, manifest.GetName())
+		}
+	} else {
+		namespaces = strings.Split(rule.Namespace, ",")
 	}
-	return nil, nil
+	return namespaces, nil
 }
