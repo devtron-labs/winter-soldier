@@ -21,18 +21,26 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 			TimeRangesWithZone:           pincherv1alpha1.TimeRangesWithZone{},
 			Rules:                        []pincherv1alpha1.Rule{{
 				Inclusions:  []pincherv1alpha1.Selector{{
-					Labels:        []string{"app=delete"},
-					Name:          "",
-					Namespace:     "pras",
-					Type:          "deployment",
-					FieldSelector: nil,
+					ObjectSelector: pincherv1alpha1.ObjectSelector{
+						Labels:        []string{"app=delete"},
+						Name:          "",
+						Type:          "deployment",
+						FieldSelector: nil,
+					},
+					NamespaceSelector: pincherv1alpha1.NamespaceSelector{
+						Name:     "pras",
+					},
 				}},
 				Exclusions:  []pincherv1alpha1.Selector{{
-					Labels:        nil,
-					Name:          "patch-demo",
-					Namespace:     "pras",
-					Type:          "deployment",
-					FieldSelector: nil,
+					ObjectSelector: pincherv1alpha1.ObjectSelector{
+						Labels:        nil,
+						Name:          "patch-demo",
+						Type:          "deployment",
+						FieldSelector: nil,
+					},
+					NamespaceSelector: pincherv1alpha1.NamespaceSelector{
+						Name:     "pras",
+					},
 				}},
 				Action:      "sleep",
 				DeleteStore: false,
@@ -51,18 +59,26 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 			TimeRangesWithZone:           pincherv1alpha1.TimeRangesWithZone{},
 			Rules:                        []pincherv1alpha1.Rule{{
 				Inclusions:  []pincherv1alpha1.Selector{{
-					Labels:        []string{"app=delete"},
-					Name:          "",
-					Namespace:     "pras",
-					Type:          "deployment",
-					FieldSelector: nil,
+					ObjectSelector: pincherv1alpha1.ObjectSelector{
+						Labels:        []string{"app=delete"},
+						Name:          "",
+						Type:          "deployment",
+						FieldSelector: nil,
+					},
+					NamespaceSelector: pincherv1alpha1.NamespaceSelector{
+						Name:     "pras",
+					},
 				}},
 				Exclusions:  []pincherv1alpha1.Selector{{
-					Labels:        nil,
-					Name:          "patch-demo",
-					Namespace:     "pras",
-					Type:          "deployment",
-					FieldSelector: nil,
+					ObjectSelector: pincherv1alpha1.ObjectSelector{
+						Labels:        nil,
+						Name:          "patch-demo",
+						Type:          "deployment",
+						FieldSelector: nil,
+					},
+					NamespaceSelector: pincherv1alpha1.NamespaceSelector{
+						Name:     "pras",
+					},
 				}},
 				Action:      "delete",
 				DeleteStore: false,

@@ -15,11 +15,15 @@ import (
 
 func TestHibernatorReconciler_handleLabelSelector(t *testing.T) {
 	rule := v1alpha1.Selector{
-		Labels:        []string{"app=nats-streaming"},
-		Name:          "",
-		Namespace:     "devtroncd",
-		Type:          "sts",
-		FieldSelector: nil,
+		ObjectSelector: v1alpha1.ObjectSelector{
+			Labels:        []string{"app=nats-streaming"},
+			Name:          "",
+			Type:          "sts",
+			FieldSelector: nil,
+		},
+		NamespaceSelector: v1alpha1.NamespaceSelector{
+			Name:     "devtroncd",
+		},
 	}
 	type fields struct {
 		Client  client.Client
@@ -105,11 +109,15 @@ func TestHibernatorReconciler_handleFieldSelector(t *testing.T) {
 				mapper: pkg.NewMapperFactory(),
 			},
 			args: args{rule: v1alpha1.Selector{
-				Labels:        []string{"app=nats-streaming"},
-				Name:          "",
-				Namespace:     "devtroncd",
-				Type:          "sts",
-				FieldSelector: []string{"metadata.name==nats-streaming-demo-devtroncd-nats-streaming"},
+				ObjectSelector: v1alpha1.ObjectSelector{
+					Labels:        []string{"app=nats-streaming"},
+					Name:          "",
+					Type:          "sts",
+					FieldSelector: []string{"metadata.name==nats-streaming-demo-devtroncd-nats-streaming"},
+				},
+				NamespaceSelector: v1alpha1.NamespaceSelector{
+					Name:     "devtroncd",
+				},
 			}},
 			want:    []string{"nats-streaming-demo-devtroncd-nats-streaming"},
 			wantErr: false,
@@ -121,11 +129,15 @@ func TestHibernatorReconciler_handleFieldSelector(t *testing.T) {
 				mapper: pkg.NewMapperFactory(),
 			},
 			args: args{rule: v1alpha1.Selector{
-				Labels:        []string{},
-				Name:          "",
-				Namespace:     "devtroncd",
-				Type:          "sts",
-				FieldSelector: []string{"metadata.name==nats-streaming-demo-devtroncd-nats-streaming"},
+				ObjectSelector: v1alpha1.ObjectSelector{
+					Labels:        []string{},
+					Name:          "",
+					Type:          "sts",
+					FieldSelector: []string{"metadata.name==nats-streaming-demo-devtroncd-nats-streaming"},
+				},
+				NamespaceSelector: v1alpha1.NamespaceSelector{
+					Name:     "devtroncd",
+				},
 			}},
 			want:    []string{"nats-streaming-demo-devtroncd-nats-streaming"},
 			wantErr: false,

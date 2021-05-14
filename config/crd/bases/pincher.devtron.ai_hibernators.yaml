@@ -70,45 +70,75 @@ spec:
                   exclusions:
                     items:
                       properties:
-                        field_selector:
-                          items:
-                            type: string
-                          type: array
-                        labels:
-                          items:
-                            type: string
-                          type: array
-                        name:
-                          type: string
-                        namespace:
-                          type: string
-                        type:
-                          type: string
+                        namespace_selector:
+                          properties:
+                            field_selector:
+                              items:
+                                type: string
+                              type: array
+                            labels:
+                              items:
+                                type: string
+                              type: array
+                            name:
+                              type: string
+                          type: object
+                        object_selector:
+                          properties:
+                            field_selector:
+                              items:
+                                type: string
+                              type: array
+                            labels:
+                              items:
+                                type: string
+                              type: array
+                            name:
+                              type: string
+                            type:
+                              type: string
+                          required:
+                          - type
+                          type: object
                       required:
-                      - namespace
-                      - type
+                      - object_selector
                       type: object
                     type: array
                   inclusions:
                     items:
                       properties:
-                        field_selector:
-                          items:
-                            type: string
-                          type: array
-                        labels:
-                          items:
-                            type: string
-                          type: array
-                        name:
-                          type: string
-                        namespace:
-                          type: string
-                        type:
-                          type: string
+                        namespace_selector:
+                          properties:
+                            field_selector:
+                              items:
+                                type: string
+                              type: array
+                            labels:
+                              items:
+                                type: string
+                              type: array
+                            name:
+                              type: string
+                          type: object
+                        object_selector:
+                          properties:
+                            field_selector:
+                              items:
+                                type: string
+                              type: array
+                            labels:
+                              items:
+                                type: string
+                              type: array
+                            name:
+                              type: string
+                            type:
+                              type: string
+                          required:
+                          - type
+                          type: object
                       required:
-                      - namespace
-                      - type
+                      - object_selector
                       type: object
                     type: array
                 required:

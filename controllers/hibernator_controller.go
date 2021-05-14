@@ -280,9 +280,9 @@ func (r *HibernatorReconciler) getMatchingObjects(selectors []pincherv1alpha1.Se
 	for _, selector := range selectors {
 		var err error
 		var matches []unstructured.Unstructured
-		if len(selector.FieldSelector) != 0 {
+		if len(selector.ObjectSelector.FieldSelector) != 0 {
 			matches, err = r.handleFieldSelector(selector)
-		} else if len(selector.Labels) != 0 {
+		} else if len(selector.ObjectSelector.Labels) != 0 {
 			matches, err = r.handleLabelSelector(selector)
 		} else {
 			matches, err = r.handleSelector(selector)

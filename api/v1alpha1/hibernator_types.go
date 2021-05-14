@@ -58,10 +58,25 @@ type TimeRange struct {
 }
 
 type Selector struct {
+	ObjectSelector    ObjectSelector    `json:"object_selector"`
+	NamespaceSelector NamespaceSelector `json:"namespace_selector,omitempty"`
+	//Labels            []string          `json:"labels,omitempty"`
+	//Name              string            `json:"name,omitempty"`
+	//Namespace         string            `json:"namespace"`
+	//Type              string            `json:"type"`
+	//FieldSelector     []string          `json:"field_selector,omitempty"`
+}
+
+type ObjectSelector struct {
 	Labels        []string `json:"labels,omitempty"`
 	Name          string   `json:"name,omitempty"`
-	Namespace     string   `json:"namespace"`
 	Type          string   `json:"type"`
+	FieldSelector []string `json:"field_selector,omitempty"`
+}
+
+type NamespaceSelector struct {
+	Labels        []string `json:"labels,omitempty"`
+	Name          string   `json:"name,omitempty"`
 	FieldSelector []string `json:"field_selector,omitempty"`
 }
 
