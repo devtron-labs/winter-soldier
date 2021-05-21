@@ -46,16 +46,16 @@ func (t TimeRangesWithZone) Contains(instant time.Time) (bool, error) {
 
 func (t TimeRange) Contains(instant time.Time) (bool, error) {
 	weekday := instant.Weekday()
-	instantInMinutes := instant.Hour() * 60 + instant.Minute()
-	from, err := t.toMinutes(t.TimeFrom)
+	instantInSeconds := hourToSeconds(instant.Hour()) + minToSeconds(instant.Minute()) + instant.Second()
+	from, err := t.toSeconds(t.TimeFrom)
 	if err != nil {
 		return false, err
 	}
-	to, err := t.toMinutes(t.TimeTo)
+	to, err := t.toSeconds(t.TimeTo)
 	if err != nil {
 		return false, err
 	}
-	if from > instantInMinutes || to < instantInMinutes {
+	if from > instantInSeconds || to < instantInSeconds {
 		return false, nil
 	}
 	fromWeekdayOrdinal := t.WeekdayFrom.toOrdinal()
@@ -66,21 +66,28 @@ func (t TimeRange) Contains(instant time.Time) (bool, error) {
 	return true, nil
 }
 
-func (t TimeRange) toMinutes(time string) (int, error) {
+func (t TimeRange) toSeconds(time string) (int, error) {
 	timeParts := strings.Split(time, ":")
 	hr, err := strconv.Atoi(timeParts[0])
 	if err != nil {
 		return 0, err
 	}
-	timeInMinutes := hr * 60
-	if len(timeParts) == 2 {
+	timeInSeconds := hourToSeconds(hr)
+	if len(timeParts) >= 2 {
 		min, err := strconv.Atoi(timeParts[1])
 		if err != nil {
 			return 0, err
 		}
-		timeInMinutes += min
+		timeInSeconds += minToSeconds(min)
 	}
-	return timeInMinutes, nil
+	if len(timeParts) >= 3 {
+		sec, err := strconv.Atoi(timeParts[2])
+		if err != nil {
+			return 0, err
+		}
+		timeInSeconds += sec
+	}
+	return timeInSeconds, nil
 }
 
 func (w Weekday) toOrdinal() int {
@@ -133,12 +140,12 @@ func (t TimeRangesWithZone) NearestTimeGap(instant time.Time) (int, bool, error)
 func (t TimeRange) NearestTimeGap(instant time.Time) (int, bool, error) {
 	inRange := false
 	timeGap := -1
-	instantInMinutes := int(instant.Weekday()) * 24 * 60 + instant.Hour() * 60 + instant.Minute()
-	fromInMinutes, err := t.toMinutes(t.TimeFrom)
+	instantInSeconds := dayOfWeekToSeconds(int(instant.Weekday())) + hourToSeconds(instant.Hour()) + minToSeconds(instant.Minute()) + instant.Second()
+	fromInSeconds, err := t.toSeconds(t.TimeFrom)
 	if err != nil {
 		return timeGap, inRange, err
 	}
-	toInMinutes, err := t.toMinutes(t.TimeTo)
+	toInSeconds, err := t.toSeconds(t.TimeTo)
 	if err != nil {
 		return timeGap, inRange, err
 	}
@@ -146,23 +153,35 @@ func (t TimeRange) NearestTimeGap(instant time.Time) (int, bool, error) {
 	fromWeekdayOrdinal := t.WeekdayFrom.toOrdinal()
 	toWeekdayOrdinal := t.WeekdayTo.toOrdinal()
 
-	fromTillInstant := int(instant.Weekday()) * 24 * 60 + fromInMinutes
-	toTillInstant := int(instant.Weekday()) * 24 * 60 + toInMinutes
-	fromTillOrdinal := fromWeekdayOrdinal * 24 * 60 + fromInMinutes
-	toTillOrdinal := toWeekdayOrdinal * 24 * 60 + toInMinutes
-	inRange = fromWeekdayOrdinal <= int(instant.Weekday()) && int(instant.Weekday()) <= toWeekdayOrdinal && fromTillInstant <= instantInMinutes && instantInMinutes <= toTillInstant
+	fromTillInstant := dayOfWeekToSeconds(int(instant.Weekday())) + fromInSeconds
+	toTillInstant := dayOfWeekToSeconds(int(instant.Weekday())) + toInSeconds
+	fromTillOrdinal := dayOfWeekToSeconds(fromWeekdayOrdinal) + fromInSeconds
+	toTillOrdinal := dayOfWeekToSeconds(toWeekdayOrdinal) + toInSeconds
+	inRange = fromWeekdayOrdinal <= int(instant.Weekday()) && int(instant.Weekday()) <= toWeekdayOrdinal && fromTillInstant <= instantInSeconds && instantInSeconds <= toTillInstant
 
 	if inRange {
-		timeGap = toTillInstant - instantInMinutes
-	} else if fromTillOrdinal > instantInMinutes  {
-		timeGap = fromTillOrdinal - instantInMinutes
-	} else if toTillOrdinal < instantInMinutes  {
-		timeGap  = fromTillOrdinal + 7 * 24 * 60 - instantInMinutes
-	} else if fromTillInstant > instantInMinutes {
-		timeGap = fromTillInstant - instantInMinutes
-	} else if toTillInstant < instantInMinutes {
-		timeGap = fromTillInstant + 1 * 24 * 60 - instantInMinutes
+		timeGap = toTillInstant - instantInSeconds
+	} else if fromTillOrdinal > instantInSeconds {
+		timeGap = fromTillOrdinal - instantInSeconds
+	} else if toTillOrdinal < instantInSeconds {
+		timeGap  = fromTillOrdinal + dayOfWeekToSeconds(7) - instantInSeconds
+	} else if fromTillInstant > instantInSeconds {
+		timeGap = fromTillInstant - instantInSeconds
+	} else if toTillInstant < instantInSeconds {
+		timeGap = fromTillInstant + dayOfWeekToSeconds(1) - instantInSeconds
 	}
 
 	return timeGap, inRange, nil
+}
+
+func dayOfWeekToSeconds(weekday int) int {
+	return weekday * 24 * 60 * 60
+}
+
+func hourToSeconds(hours int) int {
+	return hours * 60 * 60
+}
+
+func minToSeconds(min int) int {
+	return min * 60
 }

@@ -62,7 +62,7 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	now := time.Now()
 	timeRangeWithZone := hibernator.Spec.TimeRangesWithZone
 	timeGap, inRange, err := timeRangeWithZone.NearestTimeGap(now)
-	requeTime := time.Duration(timeGap) * time.Minute
+	requeTime := time.Duration(timeGap) * time.Second
 	if err != nil {
 		hibernator.Status.Status = "Failed"
 		hibernator.Status.Message = err.Error()
