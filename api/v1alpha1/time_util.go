@@ -152,6 +152,9 @@ func (t TimeRange) NearestTimeGap(instant time.Time) (int, bool, error) {
 
 	fromWeekdayOrdinal := t.WeekdayFrom.toOrdinal()
 	toWeekdayOrdinal := t.WeekdayTo.toOrdinal()
+	if fromWeekdayOrdinal > toWeekdayOrdinal {
+		toWeekdayOrdinal += 7
+	}
 
 	fromTillInstant := dayOfWeekToSeconds(int(instant.Weekday())) + fromInSeconds
 	toTillInstant := dayOfWeekToSeconds(int(instant.Weekday())) + toInSeconds
