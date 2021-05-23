@@ -34,12 +34,12 @@ func (r *HibernatorReconciler) handleLabelSelector(rule pincherv1alpha1.Selector
 		return nil, err
 	}
 	var manifests []unstructured.Unstructured
-	for _, namespace := range namespaces {
-		for _, t := range types {
-			resourceMapping, err := factory.MappingFor(t)
-			if err != nil {
-				return nil, err
-			}
+	for _, t := range types {
+		resourceMapping, err := factory.MappingFor(t)
+		if err != nil {
+			return nil, err
+		}
+		for _, namespace := range namespaces {
 			request := &pkg.ListRequest{
 				Namespace:            namespace,
 				GroupVersionResource: resourceMapping.Resource,
@@ -105,12 +105,12 @@ func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]
 	if len(rule.ObjectSelector.Name) > 0 {
 		names := strings.Split(rule.ObjectSelector.Name, ",")
 		var manifests []unstructured.Unstructured
-		for _, namespace := range namespaces {
-			for _, t := range types {
-				resourceMapping, err := factory.MappingFor(t)
-				if err != nil {
-					return nil, err
-				}
+		for _, t := range types {
+			resourceMapping, err := factory.MappingFor(t)
+			if err != nil {
+				return nil, err
+			}
+			for _, namespace := range namespaces {
 				for _, name := range names {
 					request := &pkg.GetRequest{
 						Name:             name,
@@ -128,12 +128,12 @@ func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]
 		return manifests, nil
 	} else {
 		var manifests []unstructured.Unstructured
-		for _, namespace := range namespaces {
-			for _, t := range types {
-				resourceMapping, err := factory.MappingFor(t)
-				if err != nil {
-					return nil, err
-				}
+		for _, t := range types {
+			resourceMapping, err := factory.MappingFor(t)
+			if err != nil {
+				return nil, err
+			}
+			for _, namespace := range namespaces {
 				request := &pkg.ListRequest{
 					Namespace:            namespace,
 					GroupVersionResource: resourceMapping.Resource,

@@ -59,6 +59,7 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	//r.Client.Get()
 	hibernator := pincherv1alpha1.Hibernator{}
 	r.Client.Get(context.Background(), req.NamespacedName, &hibernator)
+	fmt.Printf("initiate processing of %s\n", GetKey(hibernator))
 	now := time.Now()
 	timeRangeWithZone := hibernator.Spec.TimeRangesWithZone
 	timeGap, inRange, err := timeRangeWithZone.NearestTimeGap(now)
@@ -68,11 +69,16 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		hibernator.Status.Message = err.Error()
 	}
 	latestHistory := r.getLatestHistory(hibernator.Status.History)
-	timeElapsedSinceLastRun := time.Now().Sub(latestHistory.Time.Time)
-	if timeElapsedSinceLastRun.Minutes() <= 1 {
-		return ctrl.Result{
-			RequeueAfter: requeTime,
-		}, nil
+	if latestHistory != nil {
+		fmt.Printf("latest history not nil for %s\n", GetKey(hibernator))
+		timeElapsedSinceLastRun := time.Now().Sub(latestHistory.Time.Time)
+		if timeElapsedSinceLastRun.Minutes() <= 1 {
+			return ctrl.Result{
+				RequeueAfter: requeTime,
+			}, nil
+		}
+	} else {
+		fmt.Printf("latest history nil for %s\n", GetKey(hibernator))
 	}
 	if (!inRange || (inRange && timeGap <= 1)) && hibernator.Status.IsHibernating {
 		finalHibernator, err := r.unhibernate(hibernator)
@@ -87,13 +93,14 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		}
 		r.Client.Update(context.Background(), finalHibernator)
 	}
-
+	fmt.Printf("end processing of %s\n", GetKey(hibernator))
 	return ctrl.Result{
 		RequeueAfter: requeTime,
 	}, nil
 }
 
 func (r *HibernatorReconciler) unhibernate(hibernator pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, error) {
+	fmt.Printf("initiating unhibernate for %s\n", GetKey(hibernator))
 	hibernator.Status.IsHibernating = false
 	latestHistory := r.getLatestHistory(hibernator.Status.History)
 	if latestHistory.Hibernate == false {
@@ -138,10 +145,12 @@ func (r *HibernatorReconciler) unhibernate(hibernator pincherv1alpha1.Hibernator
 		ExcludedObjects: []pincherv1alpha1.ExcludedObject{},
 	}
 	hibernator.Status.History = r.addToHistory(history, hibernator.Status.History)
+	fmt.Printf("ending unhibernate for %s\n", GetKey(hibernator))
 	return &hibernator, nil
 }
 
 func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, error) {
+	fmt.Printf("starting hibernate for %s\n", GetKey(hibernator))
 	hibernator.Status.IsHibernating = true
 	var impactedObjects []pincherv1alpha1.ImpactedObject
 	var excludedObjects []pincherv1alpha1.ExcludedObject
@@ -224,6 +233,7 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 		ExcludedObjects: excludedObjects,
 	}
 	hibernator.Status.History = r.addToHistory(history, hibernator.Status.History)
+	fmt.Printf("ending hibernate for %s\n", GetKey(hibernator))
 	return &hibernator, nil
 }
 
@@ -249,7 +259,7 @@ func (r *HibernatorReconciler) addToHistory(history pincherv1alpha1.RevisionHist
 
 }
 
-func (r *HibernatorReconciler) getLatestHistory(revisionHistories []pincherv1alpha1.RevisionHistory) pincherv1alpha1.RevisionHistory {
+func (r *HibernatorReconciler) getLatestHistory(revisionHistories []pincherv1alpha1.RevisionHistory) *pincherv1alpha1.RevisionHistory {
 	maxID := int64(-1)
 	for _, history := range revisionHistories {
 		if history.ID > maxID {
@@ -262,7 +272,7 @@ func (r *HibernatorReconciler) getLatestHistory(revisionHistories []pincherv1alp
 			latestHistory = history
 		}
 	}
-	return latestHistory
+	return &latestHistory
 }
 
 func (r *HibernatorReconciler) getNewRevisionID(revisionHistories []pincherv1alpha1.RevisionHistory) int64 {
@@ -321,4 +331,8 @@ func (r *HibernatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 type TargetObjectHPAPair struct {
 	TargetObject *unstructured.Unstructured
 	HPA          *unstructured.Unstructured
+}
+
+func GetKey(hibernator pincherv1alpha1.Hibernator) string {
+	return fmt.Sprintf("/%s/%s/%s/%s", hibernator.Namespace, hibernator.APIVersion, hibernator.Kind, hibernator.Name)
 }
