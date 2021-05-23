@@ -73,6 +73,7 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		fmt.Printf("latest history not nil for %s\n", GetKey(hibernator))
 		timeElapsedSinceLastRun := time.Now().Sub(latestHistory.Time.Time)
 		if timeElapsedSinceLastRun.Minutes() <= 1 {
+			fmt.Printf("skipping reconciliation for %s as timeElapse is less than 1 min\n", GetKey(hibernator))
 			return ctrl.Result{
 				RequeueAfter: requeTime,
 			}, nil
@@ -266,11 +267,16 @@ func (r *HibernatorReconciler) getLatestHistory(revisionHistories []pincherv1alp
 			maxID = history.ID
 		}
 	}
+	found := false
 	var latestHistory pincherv1alpha1.RevisionHistory
 	for _, history := range revisionHistories {
 		if history.ID == maxID {
 			latestHistory = history
+			found = true
 		}
+	}
+	if !found {
+		return nil
 	}
 	return &latestHistory
 }
