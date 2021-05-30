@@ -81,18 +81,21 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	} else {
 		fmt.Printf("latest history nil for %s\n", GetKey(hibernator))
 	}
-	if (!inRange || (inRange && timeGap <= 1)) && hibernator.Status.IsHibernating {
+	if (!inRange /*|| (inRange && timeGap <= 1)*/) && hibernator.Status.IsHibernating {
 		finalHibernator, err := r.unhibernate(hibernator)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		r.Client.Update(context.Background(), finalHibernator)
-	} else if (inRange || (!inRange && timeGap <= 1)) && !hibernator.Status.IsHibernating {
+	} else if (inRange/* || (!inRange && timeGap <= 1)*/) && !hibernator.Status.IsHibernating {
 		finalHibernator, err := r.hibernate(hibernator)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		r.Client.Update(context.Background(), finalHibernator)
+		err = r.Client.Update(context.Background(), finalHibernator)
+		if err != nil {
+			fmt.Printf("error while updating hibernator %v\n", err)
+		}
 	}
 	fmt.Printf("end processing of %s\n", GetKey(hibernator))
 	return ctrl.Result{
@@ -224,6 +227,12 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 			impactedObject.Status = "success"
 			impactedObjects = append(impactedObjects, impactedObject)
 		}
+	}
+	if impactedObjects == nil {
+		impactedObjects = make([]pincherv1alpha1.ImpactedObject, 0)
+	}
+	if excludedObjects == nil {
+		excludedObjects = make([]pincherv1alpha1.ExcludedObject, 0)
 	}
 
 	history := pincherv1alpha1.RevisionHistory{

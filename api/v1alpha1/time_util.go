@@ -22,6 +22,10 @@ import (
 	"time"
 )
 
+const (
+	firstDayOfWeek = 0
+	lastDayOfWeek = 6
+)
 func (t TimeRangesWithZone) Contains(instant time.Time) (bool, error) {
 	zone := "UTC"
 	if len(t.TimeZone) != 0 {
@@ -124,12 +128,19 @@ func (t TimeRangesWithZone) NearestTimeGap(instant time.Time) (int, bool, error)
 	timeWithZone := instant.In(loc)
 	nearestTimeGap := 2147483647
 	inRange := false
-	for _, tr := range t.TimeRanges {
+	normalizedTimeRanges := t.normalizeTimeRange()
+	for _, tr := range normalizedTimeRanges {
 		timeGap, contains, err := tr.NearestTimeGap(timeWithZone)
 		if err != nil {
 			return -1, false, err
 		}
-		if nearestTimeGap > timeGap {
+		if contains && inRange && nearestTimeGap > timeGap {
+			nearestTimeGap = timeGap
+			inRange = contains
+		} else if contains && !inRange {
+			nearestTimeGap = timeGap
+			inRange = contains
+		} else if !inRange && nearestTimeGap > timeGap {
 			nearestTimeGap = timeGap
 			inRange = contains
 		}
@@ -137,44 +148,71 @@ func (t TimeRangesWithZone) NearestTimeGap(instant time.Time) (int, bool, error)
 	return nearestTimeGap, inRange, nil
 }
 
+func (t TimeRangesWithZone) normalizeTimeRange() []TimeRange {
+	var normalizedTimeRanges []TimeRange
+	for _, tr := range t.TimeRanges {
+		if tr.WeekdayFrom.toOrdinal() < tr.WeekdayTo.toOrdinal() {
+			normalizedTimeRanges = append(normalizedTimeRanges, tr)
+		} else {
+			tr1 := cloneTimeRange(tr)
+			tr1.WeekdayTo = Sat
+			tr2 := cloneTimeRange(tr)
+			tr2.WeekdayFrom = Sun
+			normalizedTimeRanges = append(normalizedTimeRanges, tr1)
+			normalizedTimeRanges = append(normalizedTimeRanges, tr2)
+		}
+	}
+	return normalizedTimeRanges
+}
+
 func (t TimeRange) NearestTimeGap(instant time.Time) (int, bool, error) {
 	inRange := false
 	timeGap := -1
-	instantInSeconds := dayOfWeekToSeconds(int(instant.Weekday())) + hourToSeconds(instant.Hour()) + minToSeconds(instant.Minute()) + instant.Second()
-	fromInSeconds, err := t.toSeconds(t.TimeFrom)
+	instantInSeconds := /*dayOfWeekToSeconds(int(instant.Weekday())) +*/ hourToSeconds(instant.Hour()) + minToSeconds(instant.Minute()) + instant.Second()
+	startTimeInSeconds, err := t.toSeconds(t.TimeFrom)
 	if err != nil {
 		return timeGap, inRange, err
 	}
-	toInSeconds, err := t.toSeconds(t.TimeTo)
+	endTimeInSeconds, err := t.toSeconds(t.TimeTo)
 	if err != nil {
 		return timeGap, inRange, err
 	}
 
 	fromWeekdayOrdinal := t.WeekdayFrom.toOrdinal()
 	toWeekdayOrdinal := t.WeekdayTo.toOrdinal()
-	if fromWeekdayOrdinal > toWeekdayOrdinal {
-		toWeekdayOrdinal += 7
-	}
 
-	fromTillInstant := dayOfWeekToSeconds(int(instant.Weekday())) + fromInSeconds
-	toTillInstant := dayOfWeekToSeconds(int(instant.Weekday())) + toInSeconds
-	fromTillOrdinal := dayOfWeekToSeconds(fromWeekdayOrdinal) + fromInSeconds
-	toTillOrdinal := dayOfWeekToSeconds(toWeekdayOrdinal) + toInSeconds
-	inRange = fromWeekdayOrdinal <= int(instant.Weekday()) && int(instant.Weekday()) <= toWeekdayOrdinal && fromTillInstant <= instantInSeconds && instantInSeconds <= toTillInstant
+	instantWeekdayInSeconds :=  dayOfWeekToSeconds(int(instant.Weekday()))
+	startTimeOnInstantInSeconds := instantWeekdayInSeconds + startTimeInSeconds
+	endTimeOnInstantInSeconds := instantWeekdayInSeconds + endTimeInSeconds
+	startTimeOnStartDayInSeconds := dayOfWeekToSeconds(fromWeekdayOrdinal) + startTimeInSeconds
+	endTimeOnEndDayInSeconds := dayOfWeekToSeconds(toWeekdayOrdinal) + endTimeInSeconds
+	inRange = fromWeekdayOrdinal <= int(instant.Weekday()) && int(instant.Weekday()) <= toWeekdayOrdinal && startTimeInSeconds <= instantInSeconds && instantInSeconds <= endTimeInSeconds
 
 	if inRange {
-		timeGap = toTillInstant - instantInSeconds
-	} else if fromTillOrdinal > instantInSeconds {
-		timeGap = fromTillOrdinal - instantInSeconds
-	} else if toTillOrdinal < instantInSeconds {
-		timeGap  = fromTillOrdinal + dayOfWeekToSeconds(7) - instantInSeconds
-	} else if fromTillInstant > instantInSeconds {
-		timeGap = fromTillInstant - instantInSeconds
-	} else if toTillInstant < instantInSeconds {
-		timeGap = fromTillInstant + dayOfWeekToSeconds(1) - instantInSeconds
+		timeGap = endTimeInSeconds - instantInSeconds
+	} else if startTimeOnStartDayInSeconds > instantInSeconds + instantWeekdayInSeconds {
+		timeGap = startTimeOnStartDayInSeconds - instantWeekdayInSeconds - instantInSeconds
+	} else if endTimeOnEndDayInSeconds < instantInSeconds + instantWeekdayInSeconds {
+		timeGap = startTimeOnStartDayInSeconds + dayOfWeekToSeconds(7) - instantInSeconds - instantWeekdayInSeconds
+	} else if startTimeOnInstantInSeconds > instantInSeconds + instantWeekdayInSeconds {
+		timeGap = startTimeOnInstantInSeconds - instantInSeconds - instantWeekdayInSeconds
+	} else if endTimeOnInstantInSeconds < instantInSeconds + instantWeekdayInSeconds {
+		timeGap = startTimeOnInstantInSeconds + dayOfWeekToSeconds(1) - instantInSeconds
 	}
 
 	return timeGap, inRange, nil
+}
+
+
+func cloneTimeRange(timeRange TimeRange) TimeRange {
+	return TimeRange{
+		TimeZone:       timeRange.TimeZone,
+		TimeFrom:       timeRange.TimeFrom,
+		TimeTo:         timeRange.TimeTo,
+		CronExpression: timeRange.CronExpression,
+		WeekdayFrom:    timeRange.WeekdayFrom,
+		WeekdayTo:      timeRange.WeekdayTo,
+	}
 }
 
 func dayOfWeekToSeconds(weekday int) int {

@@ -118,6 +118,20 @@ func TestTimeRangesWithZone_NearestTimeGap(t1 *testing.T) {
 		WeekdayFrom:    "Mon",
 		WeekdayTo:      "Wed",
 	}
+	tr4 := TimeRange{
+		TimeFrom:       "18:00",
+		TimeTo:         "20",
+		CronExpression: "",
+		WeekdayFrom:    "Fri",
+		WeekdayTo:      "Sun",
+	}
+	tr5 := TimeRange{
+		TimeFrom:       "19:00",
+		TimeTo:         "22",
+		CronExpression: "",
+		WeekdayFrom:    "Sun",
+		WeekdayTo:      "Tue",
+	}
 	const layout = "Jan 2, 2006 at 3:04pm (IST)"
 	tm, _ := time.Parse(layout, "Mar 27, 2021 at 12:45pm (IST)")
 	tm2, _ := time.Parse(layout, "Mar 27, 2021 at 12:15pm (IST)")
@@ -126,6 +140,7 @@ func TestTimeRangesWithZone_NearestTimeGap(t1 *testing.T) {
 	tm5, _ := time.Parse(layout, "Mar 25, 2021 at 3:15pm (IST)")
 	tm6, _ := time.Parse(layout, "Mar 25, 2021 at 3:15pm (IST)")
 	tm7, _ := time.Parse(layout, "Mar 23, 2021 at 12:45pm (IST)")
+	tm8, _ := time.Parse(layout, "Mar 28, 2021 at 12:45pm (IST)")
 	type fields struct {
 		TimeRanges []TimeRange
 		TimeZone   string
@@ -226,6 +241,28 @@ func TestTimeRangesWithZone_NearestTimeGap(t1 *testing.T) {
 			},
 			args:    args{instant: tm7},
 			want:    165*60,
+			want1:   true,
+			wantErr: false,
+		},
+		{
+			name: "inRange circular",
+			fields: fields{
+				TimeRanges: []TimeRange{tr4},
+				TimeZone:   "Asia/Kolkata",
+			},
+			args:    args{instant: tm8},
+			want:    105*60,
+			want1:   true,
+			wantErr: false,
+		},
+		{
+			name: "inRange circular with overlapping ranges",
+			fields: fields{
+				TimeRanges: []TimeRange{tr4, tr5},
+				TimeZone:   "Asia/Kolkata",
+			},
+			args:    args{instant: tm8},
+			want:    105*60,
 			want1:   true,
 			wantErr: false,
 		},
