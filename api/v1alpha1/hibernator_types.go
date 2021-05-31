@@ -28,12 +28,12 @@ type HibernatorSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	TimeRangesWithZone           TimeRangesWithZone `json:"time_ranges_with_zone,omitempty"`
-	Rules                        []Rule             `json:"rules"`
-	UnHibernate                  bool               `json:"reset,omitempty"`
-	CanUnHibernateObjectManually bool               `json:"can_un_hibernate_object_manually,omitempty"`
-	Pause                        bool               `json:"pause,omitempty"`
-	PauseUntil                   TimeRange          `json:"pause_until,omitempty"`
+	TimeRangesWithZone TimeRangesWithZone `json:"time_ranges_with_zone,omitempty"`
+	Rules              []Rule             `json:"rules"`
+	UnHibernate        bool               `json:"reset,omitempty"`
+	ReSyncInterval     int                `json:"reSync_interval,omitempty"`
+	Pause              bool               `json:"pause,omitempty"`
+	PauseUntil         TimeRange          `json:"pause_until,omitempty"`
 }
 
 type Rule struct {

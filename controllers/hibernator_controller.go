@@ -60,10 +60,16 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	hibernator := pincherv1alpha1.Hibernator{}
 	r.Client.Get(context.Background(), req.NamespacedName, &hibernator)
 	fmt.Printf("initiate processing of %s\n", GetKey(hibernator))
+	if hibernator.Spec.Pause {
+		return ctrl.Result{}, nil
+	}
 	now := time.Now()
 	timeRangeWithZone := hibernator.Spec.TimeRangesWithZone
 	timeGap, inRange, err := timeRangeWithZone.NearestTimeGap(now)
-	requeTime := time.Duration(timeGap) * time.Second
+	requeueTime := time.Duration(timeGap) * time.Second
+	if requeueTime.Seconds() > float64(hibernator.Spec.ReSyncInterval) && hibernator.Spec.ReSyncInterval > 0 {
+		requeueTime = time.Duration(hibernator.Spec.ReSyncInterval) * time.Second
+	}
 	if err != nil {
 		hibernator.Status.Status = "Failed"
 		hibernator.Status.Message = err.Error()
@@ -75,7 +81,7 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		if timeElapsedSinceLastRun.Minutes() <= 1 {
 			fmt.Printf("skipping reconciliation for %s as timeElapse is less than 1 min\n", GetKey(hibernator))
 			return ctrl.Result{
-				RequeueAfter: requeTime,
+				RequeueAfter: requeueTime,
 			}, nil
 		}
 	} else {
@@ -99,7 +105,7 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	}
 	fmt.Printf("end processing of %s\n", GetKey(hibernator))
 	return ctrl.Result{
-		RequeueAfter: requeTime,
+		RequeueAfter: requeueTime,
 	}, nil
 }
 

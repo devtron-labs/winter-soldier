@@ -34,8 +34,6 @@ spec:
         spec:
           description: HibernatorSpec defines the desired state of Hibernator
           properties:
-            can_un_hibernate_object_manually:
-              type: boolean
             pause:
               type: boolean
             pause_until:
@@ -58,6 +56,8 @@ spec:
               - weekday_from
               - weekday_to
               type: object
+            reSync_interval:
+              type: integer
             reset:
               type: boolean
             rules:
