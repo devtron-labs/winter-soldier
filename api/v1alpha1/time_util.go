@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -129,6 +130,7 @@ func (t TimeRangesWithZone) NearestTimeGap(instant time.Time) (int, bool, error)
 	nearestTimeGap := 2147483647
 	inRange := false
 	normalizedTimeRanges := t.normalizeTimeRange()
+	var matchedTimeRange *TimeRange
 	for _, tr := range normalizedTimeRanges {
 		timeGap, contains, err := tr.NearestTimeGap(timeWithZone)
 		if err != nil {
@@ -137,14 +139,21 @@ func (t TimeRangesWithZone) NearestTimeGap(instant time.Time) (int, bool, error)
 		if contains && inRange && nearestTimeGap > timeGap {
 			nearestTimeGap = timeGap
 			inRange = contains
+			t := cloneTimeRange(tr)
+			matchedTimeRange = &t
 		} else if contains && !inRange {
 			nearestTimeGap = timeGap
 			inRange = contains
+			t := cloneTimeRange(tr)
+			matchedTimeRange = &t
 		} else if !inRange && nearestTimeGap > timeGap {
 			nearestTimeGap = timeGap
 			inRange = contains
+			t := cloneTimeRange(tr)
+			matchedTimeRange = &t
 		}
 	}
+	fmt.Printf("matched timeRange %v\n", matchedTimeRange)
 	return nearestTimeGap, inRange, nil
 }
 

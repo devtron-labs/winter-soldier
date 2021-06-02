@@ -70,6 +70,9 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 	if requeueTime.Seconds() > float64(hibernator.Spec.ReSyncInterval) && hibernator.Spec.ReSyncInterval > 0 {
 		requeueTime = time.Duration(hibernator.Spec.ReSyncInterval) * time.Second
 	}
+	if requeueTime.Seconds() < 10 {
+		requeueTime = time.Duration(60) * time.Second
+	}
 	if err != nil {
 		hibernator.Status.Status = "Failed"
 		hibernator.Status.Message = err.Error()
@@ -93,7 +96,7 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 			return ctrl.Result{}, err
 		}
 		r.Client.Update(context.Background(), finalHibernator)
-	} else if (inRange/* || (!inRange && timeGap <= 1)*/) && !hibernator.Status.IsHibernating {
+	} else if (inRange /* || (!inRange && timeGap <= 1)*/) && !hibernator.Status.IsHibernating {
 		finalHibernator, err := r.hibernate(hibernator)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -102,8 +105,12 @@ func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) 
 		if err != nil {
 			fmt.Printf("error while updating hibernator %v\n", err)
 		}
+	} else {
+		fmt.Printf("didnt hibernate or unhibernate - inRange: %t, timegap: %d, hibernating: %t\n", inRange, timeGap, hibernator.Status.IsHibernating)
+		//fmt.Printf("didnt hibernate or unhibernate - start time: %v, timegap: %d, requeueTime:  %s\n", now, timeGap, requeueTime)
 	}
 	fmt.Printf("end processing of %s\n", GetKey(hibernator))
+	fmt.Printf("processing parameter - start time: %v, timegap: %d, requeueTime:  %s\n", now, timeGap, requeueTime)
 	return ctrl.Result{
 		RequeueAfter: requeueTime,
 	}, nil
