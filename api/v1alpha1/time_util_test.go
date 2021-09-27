@@ -273,16 +273,16 @@ func TestTimeRangesWithZone_NearestTimeGap(t1 *testing.T) {
 				TimeRanges: tt.fields.TimeRanges,
 				TimeZone:   tt.fields.TimeZone,
 			}
-			got, got1, err := t.NearestTimeGap(tt.args.instant)
+			got, got1, err := t.NearestTimeGapInSeconds(tt.args.instant)
 			if (err != nil) != tt.wantErr {
-				t1.Errorf("NearestTimeGap() error = %v, wantErr %v", err, tt.wantErr)
+				t1.Errorf("NearestTimeGapInSeconds() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if got != tt.want {
-				t1.Errorf("NearestTimeGap() got = %v, want %v", got, tt.want)
+				t1.Errorf("NearestTimeGapInSeconds() got = %v, want %v", got, tt.want)
 			}
 			if got1 != tt.want1 {
-				t1.Errorf("NearestTimeGap() got1 = %v, want %v", got1, tt.want1)
+				t1.Errorf("NearestTimeGapInSeconds() got1 = %v, want %v", got1, tt.want1)
 			}
 		})
 	}

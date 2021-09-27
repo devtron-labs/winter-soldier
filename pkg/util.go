@@ -18,87 +18,80 @@ package pkg
 
 import (
 	"fmt"
+	"github.com/antonmedv/expr"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/tidwall/gjson"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-type Operator interface {
-	execute(lhs string, rhs string)
-}
+const VariableRegex = `\{\{[^\}\}|\{\{]*\}\}`
 
-var operations = []string{"==", "!=", "!", ">=", "<=", "=>", "=<", ">", "<"}
-
-func SplitByLogicalOperator(input string) ([]string, error) {
-	var operands []string
-	for _, operation := range operations {
-		if strings.Index(input, operation) > -1 {
-			operands = append(operands, operation)
-			parts := strings.Split(input, operation)
-			for _, part := range parts {
-				if len(part) > 0 {
-					operands = append(operands, part)
+func ExpressionEvaluator(expression, json string) bool {
+	rp, _ := regexp.Compile(VariableRegex)
+	matches := rp.FindAllString(expression, -1)
+	variables := make(map[string]interface{}, len(matches))
+	finalExpression := expression
+	for index, match := range matches {
+		originalMatch := match
+		match = strings.Replace(match, "{{", "", 1)
+		match = strings.Replace(match, "}}", "", 1)
+		variableName := "var" + strconv.Itoa(index)
+		//fmt.Println(match)
+		res := gjson.Get(json, match)
+		switch res.Type {
+		case gjson.Null:
+			variables[variableName] = nil
+		case gjson.False:
+			variables[variableName] = false
+		case gjson.True:
+			variables[variableName] = true
+		case gjson.String:
+			variables[variableName] = res.Str
+		case gjson.Number:
+			variables[variableName] = res.Float()
+		case gjson.JSON:
+			if strings.Index(res.Raw, "[") == 0 {
+				var arr []interface{}
+				err := jsoniter.Unmarshal([]byte(res.String()), &arr)
+				if err != nil {
+					variables[variableName] = res.Raw
+				} else {
+					variables[variableName] = arr
 				}
+			} else if strings.Index(res.Raw, "{") == 0 {
+				var dict map[string]interface{}
+				err := jsoniter.Unmarshal([]byte(res.String()), &dict)
+				if err != nil {
+					variables[variableName] = res.Raw
+				} else {
+					variables[variableName] = dict
+				}
+			} else {
+				variables[variableName] = res.Raw
 			}
-			return operands, nil
 		}
+		finalExpression = strings.ReplaceAll(finalExpression, originalMatch, variableName)
 	}
-	operands = []string{"", input}
-	return operands, nil
-}
-
-func ApplyLogicalOperator(result gjson.Result, ops []string) (bool, error) {
-	switch ops[0] {
-	case "==":
-		return result.String() == ops[2], nil
-	case "!=":
-		return result.String() != ops[2], nil
-	case "!":
-		return !result.Exists(), nil
-	case ">=", "=>", "<=", "=<", ">", "<":
-		return Compare(result, ops)
-	case "":
-		return result.Exists(), nil
-	default:
-		return false, fmt.Errorf("unknown operator")
+	//fmt.Println(expression)
+	fmt.Println(finalExpression)
+	fmt.Println(variables)
+	program, err := expr.Compile(finalExpression, expr.Env(variables))
+	if err != nil {
+		fmt.Println(err)
+		return false
 	}
-	return false, fmt.Errorf("unknown operator")
-}
-
-func Compare(result gjson.Result, ops []string) (bool, error) {
-	switch result.Type {
+	output, err := expr.Run(program, variables)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	//fmt.Println(output)
+	switch v := output.(type) {
+	case bool:
+		return v
 	default:
-		return false, fmt.Errorf("unsupported type")
-	case gjson.False, gjson.True:
-		return false, fmt.Errorf("unsupported operation %s for boolean type", ops[0])
-	case gjson.Number:
-		// calculated result
-		in, err := strconv.ParseFloat(ops[2], 64)
-		if err != nil {
-			return false, fmt.Errorf("error while typecasting to float %v", err)
-		}
-		switch ops[0] {
-		case ">=", "=>":
-			return result.Num >= in, nil
-		case "<=", "=<":
-			return result.Num <= in, nil
-		case ">":
-			return result.Num > in, nil
-		case "<":
-			return result.Num < in, nil
-		}
-		return false, fmt.Errorf("unsupported operation %s", ops[0])
-	case gjson.String, gjson.JSON:
-		switch ops[0] {
-		case ">=", "=>":
-			return result.Str >= ops[2], nil
-		case "<=", "=<":
-			return result.Str <= ops[2], nil
-		case "<":
-			return result.Str < ops[2], nil
-		case ">":
-			return result.Str > ops[2], nil
-		}
-		return false, fmt.Errorf("unsupported operator %s", ops[0])
+		return false
 	}
 }

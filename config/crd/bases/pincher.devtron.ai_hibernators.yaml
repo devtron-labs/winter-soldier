@@ -34,45 +34,37 @@ spec:
         spec:
           description: HibernatorSpec defines the desired state of Hibernator
           properties:
+            hibernate:
+              type: boolean
             pause:
               type: boolean
-            pause_until:
+            pauseUntil:
               properties:
-                cron_expression:
+                dateTime:
                   type: string
-                time_from:
-                  type: string
-                time_to:
-                  type: string
-                timezone:
-                  type: string
-                weekday_from:
-                  type: string
-                weekday_to:
+                timeZone:
                   type: string
               required:
-              - time_from
-              - time_to
-              - weekday_from
-              - weekday_to
+              - dateTime
+              - timeZone
               type: object
-            reSync_interval:
+            reSyncInterval:
               type: integer
-            reset:
-              type: boolean
+            revisionHistoryLimit:
+              type: integer
             rules:
               items:
                 properties:
                   action:
                     type: string
-                  delete_store:
+                  deleteStore:
                     type: boolean
                   exclusions:
                     items:
                       properties:
-                        namespace_selector:
+                        namespaceSelector:
                           properties:
-                            field_selector:
+                            fieldSelector:
                               items:
                                 type: string
                               type: array
@@ -83,9 +75,9 @@ spec:
                             name:
                               type: string
                           type: object
-                        object_selector:
+                        objectSelector:
                           properties:
-                            field_selector:
+                            fieldSelector:
                               items:
                                 type: string
                               type: array
@@ -101,15 +93,15 @@ spec:
                           - type
                           type: object
                       required:
-                      - object_selector
+                      - objectSelector
                       type: object
                     type: array
                   inclusions:
                     items:
                       properties:
-                        namespace_selector:
+                        namespaceSelector:
                           properties:
-                            field_selector:
+                            fieldSelector:
                               items:
                                 type: string
                               type: array
@@ -120,9 +112,9 @@ spec:
                             name:
                               type: string
                           type: object
-                        object_selector:
+                        objectSelector:
                           properties:
-                            field_selector:
+                            fieldSelector:
                               items:
                                 type: string
                               type: array
@@ -138,7 +130,7 @@ spec:
                           - type
                           type: object
                       required:
-                      - object_selector
+                      - objectSelector
                       type: object
                     type: array
                 required:
@@ -146,36 +138,41 @@ spec:
                 - inclusions
                 type: object
               type: array
-            time_ranges_with_zone:
+            timeRangesWithZone:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "make" to regenerate code after modifying this file'
               properties:
-                time_ranges:
+                timeRanges:
                   items:
                     properties:
-                      cron_expression:
+                      cronExpression:
                         type: string
-                      time_from:
+                      timeFrom:
                         type: string
-                      time_to:
+                      timeTo:
                         type: string
-                      timezone:
+                      timeZone:
                         type: string
-                      weekday_from:
+                      weekdayFrom:
                         type: string
-                      weekday_to:
+                      weekdayTo:
                         type: string
                     required:
-                    - time_from
-                    - time_to
-                    - weekday_from
-                    - weekday_to
+                    - timeFrom
+                    - timeTo
+                    - weekdayFrom
+                    - weekdayTo
                     type: object
                   type: array
-                timezone:
+                timeZone:
                   type: string
               required:
-              - time_ranges
+              - timeRanges
               type: object
+            unHibernate:
+              type: boolean
           required:
+          - revisionHistoryLimit
           - rules
           type: object
         status:
@@ -187,28 +184,19 @@ spec:
                 this file'
               items:
                 properties:
-                  excluded_objects:
+                  excludedObjects:
                     items:
                       properties:
-                        group:
-                          type: string
-                        kind:
-                          type: string
-                        name:
-                          type: string
-                        namespace:
-                          type: string
                         reason:
+                          description: Group       string `json:"group"` Version     string
+                            `json:"version"` Kind        string `json:"kind"` Name        string
+                            `json:"name"` Namespace   string `json:"namespace"`
                           type: string
-                        version:
+                        resourceKey:
                           type: string
                       required:
-                      - group
-                      - kind
-                      - name
-                      - namespace
                       - reason
-                      - version
+                      - resourceKey
                       type: object
                     type: array
                   hibernate:
@@ -216,52 +204,44 @@ spec:
                   id:
                     format: int64
                     type: integer
-                  impacted_objects:
+                  impactedObjects:
                     items:
                       properties:
-                        group:
-                          type: string
-                        kind:
-                          type: string
                         message:
                           type: string
-                        name:
-                          type: string
-                        namespace:
-                          type: string
-                        original_count:
+                        originalCount:
+                          description: Group                string `json:"group"`
+                            Version              string `json:"version"` Kind                 string
+                            `json:"kind"` Name                 string `json:"name"`
+                            Namespace            string `json:"namespace"`
                           format: int64
                           type: integer
-                        related_deleted_object:
+                        relatedDeletedObject:
+                          type: string
+                        resourceKey:
                           type: string
                         status:
                           type: string
-                        version:
-                          type: string
                       required:
-                      - group
-                      - kind
                       - message
-                      - name
-                      - namespace
-                      - original_count
-                      - related_deleted_object
+                      - originalCount
+                      - relatedDeletedObject
+                      - resourceKey
                       - status
-                      - version
                       type: object
                     type: array
                   time:
                     format: date-time
                     type: string
                 required:
-                - excluded_objects
+                - excludedObjects
                 - hibernate
                 - id
-                - impacted_objects
+                - impactedObjects
                 - time
                 type: object
               type: array
-            is_hibernating:
+            isHibernating:
               type: boolean
             message:
               type: string
@@ -269,7 +249,7 @@ spec:
               type: string
           required:
           - history
-          - is_hibernating
+          - isHibernating
           - message
           - status
           type: object

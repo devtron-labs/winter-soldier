@@ -33,10 +33,10 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 	hibernator := pincherv1alpha1.Hibernator{
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{},
-		Spec:       pincherv1alpha1.HibernatorSpec{
-			TimeRangesWithZone:           pincherv1alpha1.TimeRangesWithZone{},
-			Rules:                        []pincherv1alpha1.Rule{{
-				Inclusions:  []pincherv1alpha1.Selector{{
+		Spec: pincherv1alpha1.HibernatorSpec{
+			When: pincherv1alpha1.TimeRangesWithZone{},
+			Rules: []pincherv1alpha1.Rule{{
+				Inclusions: []pincherv1alpha1.Selector{{
 					ObjectSelector: pincherv1alpha1.ObjectSelector{
 						Labels:        []string{"app=delete"},
 						Name:          "",
@@ -44,10 +44,10 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 						FieldSelector: nil,
 					},
 					NamespaceSelector: pincherv1alpha1.NamespaceSelector{
-						Name:     "pras",
+						Name: "pras",
 					},
 				}},
-				Exclusions:  []pincherv1alpha1.Selector{{
+				Exclusions: []pincherv1alpha1.Selector{{
 					ObjectSelector: pincherv1alpha1.ObjectSelector{
 						Labels:        nil,
 						Name:          "patch-demo",
@@ -55,26 +55,25 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 						FieldSelector: nil,
 					},
 					NamespaceSelector: pincherv1alpha1.NamespaceSelector{
-						Name:     "pras",
+						Name: "pras",
 					},
 				}},
 				Action:      "sleep",
 				DeleteStore: false,
 			}},
-			UnHibernate:                  false,
-			CanUnHibernateObjectManually: false,
-			Pause:                        false,
-			PauseUntil:                   pincherv1alpha1.TimeRange{},
+			UnHibernate: false,
+			Pause:       false,
+			PauseUntil:  pincherv1alpha1.DateTimeWithZone{},
 		},
-		Status:     pincherv1alpha1.HibernatorStatus{},
+		Status: pincherv1alpha1.HibernatorStatus{},
 	}
 	hibernator2 := pincherv1alpha1.Hibernator{
 		TypeMeta:   metav1.TypeMeta{},
 		ObjectMeta: metav1.ObjectMeta{},
-		Spec:       pincherv1alpha1.HibernatorSpec{
-			TimeRangesWithZone:           pincherv1alpha1.TimeRangesWithZone{},
-			Rules:                        []pincherv1alpha1.Rule{{
-				Inclusions:  []pincherv1alpha1.Selector{{
+		Spec: pincherv1alpha1.HibernatorSpec{
+			When: pincherv1alpha1.TimeRangesWithZone{},
+			Rules: []pincherv1alpha1.Rule{{
+				Inclusions: []pincherv1alpha1.Selector{{
 					ObjectSelector: pincherv1alpha1.ObjectSelector{
 						Labels:        []string{"app=delete"},
 						Name:          "",
@@ -82,10 +81,10 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 						FieldSelector: nil,
 					},
 					NamespaceSelector: pincherv1alpha1.NamespaceSelector{
-						Name:     "pras",
+						Name: "pras",
 					},
 				}},
-				Exclusions:  []pincherv1alpha1.Selector{{
+				Exclusions: []pincherv1alpha1.Selector{{
 					ObjectSelector: pincherv1alpha1.ObjectSelector{
 						Labels:        nil,
 						Name:          "patch-demo",
@@ -93,18 +92,17 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 						FieldSelector: nil,
 					},
 					NamespaceSelector: pincherv1alpha1.NamespaceSelector{
-						Name:     "pras",
+						Name: "pras",
 					},
 				}},
 				Action:      "delete",
 				DeleteStore: false,
 			}},
-			UnHibernate:                  false,
-			CanUnHibernateObjectManually: false,
-			Pause:                        false,
-			PauseUntil:                   pincherv1alpha1.TimeRange{},
+			UnHibernate: false,
+			Pause:       false,
+			PauseUntil:  pincherv1alpha1.DateTimeWithZone{},
 		},
-		Status:     pincherv1alpha1.HibernatorStatus{},
+		Status: pincherv1alpha1.HibernatorStatus{},
 	}
 	type fields struct {
 		Client  client.Client

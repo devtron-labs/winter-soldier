@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
-	"math"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -36,6 +35,8 @@ import (
 
 	pincherv1alpha1 "github.com/devtron-labs/winter-soldier/api/v1alpha1"
 )
+
+const layout = "Jan 2, 2006 3:04pm"
 
 // HibernatorReconciler reconciles a Hibernator object
 type HibernatorReconciler struct {
@@ -52,108 +53,139 @@ const patch = `[{"op": "replace", "path": "/spec/replicas", "value":%d}]`
 // +kubebuilder:rbac:groups=pincher.devtron.ai,resources=hibernators/status,verbs=get;update;patch
 
 func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("hibernator", req.NamespacedName)
+	//_ = context.Background()
+	log := r.Log.WithValues("hibernator", req.NamespacedName)
 
 	// your logic here
 	//r.Client.Get()
 	hibernator := pincherv1alpha1.Hibernator{}
-	r.Client.Get(context.Background(), req.NamespacedName, &hibernator)
-	fmt.Printf("initiate processing of %s\n", GetKey(hibernator))
-	if hibernator.Spec.Pause {
-		return ctrl.Result{}, nil
-	}
-	now := time.Now()
-	timeRangeWithZone := hibernator.Spec.TimeRangesWithZone
-	timeGap, inRange, err := timeRangeWithZone.NearestTimeGap(now)
-	requeueTime := time.Duration(timeGap) * time.Second
-	if requeueTime.Seconds() > float64(hibernator.Spec.ReSyncInterval) && hibernator.Spec.ReSyncInterval > 0 {
-		requeueTime = time.Duration(hibernator.Spec.ReSyncInterval) * time.Second
-	}
-	if requeueTime.Seconds() < 10 {
-		requeueTime = time.Duration(60) * time.Second
-	}
+	err := r.Client.Get(context.Background(), req.NamespacedName, &hibernator)
 	if err != nil {
-		hibernator.Status.Status = "Failed"
-		hibernator.Status.Message = err.Error()
+		log.Error(err, "error while fetching hibernator")
+		return ctrl.Result{}, err
 	}
-	latestHistory := r.getLatestHistory(hibernator.Status.History)
-	if latestHistory != nil {
-		fmt.Printf("latest history not nil for %s\n", GetKey(hibernator))
-		timeElapsedSinceLastRun := time.Now().Sub(latestHistory.Time.Time)
-		if timeElapsedSinceLastRun.Minutes() <= 1 {
-			fmt.Printf("skipping reconciliation for %s as timeElapse is less than 1 min\n", GetKey(hibernator))
-			return ctrl.Result{
-				RequeueAfter: requeueTime,
-			}, nil
-		}
-	} else {
-		fmt.Printf("latest history nil for %s\n", GetKey(hibernator))
-	}
-	if (!inRange /*|| (inRange && timeGap <= 1)*/) && hibernator.Status.IsHibernating {
-		finalHibernator, err := r.unhibernate(hibernator)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		r.Client.Update(context.Background(), finalHibernator)
-	} else if (inRange /* || (!inRange && timeGap <= 1)*/) && !hibernator.Status.IsHibernating {
-		finalHibernator, err := r.hibernate(hibernator)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		err = r.Client.Update(context.Background(), finalHibernator)
-		if err != nil {
-			fmt.Printf("error while updating hibernator %v\n", err)
-		}
-	} else {
-		fmt.Printf("didnt hibernate or unhibernate - inRange: %t, timegap: %d, hibernating: %t\n", inRange, timeGap, hibernator.Status.IsHibernating)
-		//fmt.Printf("didnt hibernate or unhibernate - start time: %v, timegap: %d, requeueTime:  %s\n", now, timeGap, requeueTime)
-	}
-	fmt.Printf("end processing of %s\n", GetKey(hibernator))
-	fmt.Printf("processing parameter - start time: %v, timegap: %d, requeueTime:  %s\n", now, timeGap, requeueTime)
-	return ctrl.Result{
-		RequeueAfter: requeueTime,
-	}, nil
+	log.Info("initiate processing")
+
+	return r.process(hibernator)
 }
 
-func (r *HibernatorReconciler) unhibernate(hibernator pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, error) {
-	fmt.Printf("initiating unhibernate for %s\n", GetKey(hibernator))
-	hibernator.Status.IsHibernating = false
+func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (ctrl.Result, error) {
+	log := r.Log.WithValues("hibernator", r.getNamespacedName(&hibernator))
+	now := time.Now()
+
+	diff, err := r.getPauseUntilDuration(&hibernator, now)
+	if err != nil {
+		log.Error(err, "continue processing as error parsing pause until %s", hibernator.Spec.PauseUntil.DateTime)
+	} else if diff.Seconds() > 60 {
+		return ctrl.Result{RequeueAfter: diff}, nil
+	}
+
+	if hibernator.Spec.Pause {
+		return ctrl.Result{}, nil
+		//return ctrl.Result{RequeueAfter: requeueTime}, nil
+	}
+
+	timeRangeWithZone := hibernator.Spec.When
+	timeGap, shouldHibernate, err := timeRangeWithZone.NearestTimeGapInSeconds(now)
+	//TODO: even if timeGap is error if reSyncInterval is set, it should still be able to work
+	if err != nil {
+		log.Error(err, "unable to parse the time interval")
+		//hibernator.Status.Status = "Failed"
+		//hibernator.Status.Message = err.Error()
+		//TODO: should it return
+		if hibernator.Spec.ReSyncInterval <= 0 {
+			log.Error(err, "unable to parse the time interval and reSyncInterval is <= 0 hence aborting")
+			//TODO: generate event
+			//TODO: update status if not already failed
+			return ctrl.Result{}, nil
+		}
+	}
+
+	if hibernator.Spec.Hibernate {
+		shouldHibernate = true
+	}
+	if hibernator.Spec.UnHibernate {
+		shouldHibernate = false
+	}
+
+	requeueTime := r.getRequeueTimeDuration(timeGap, &hibernator)
+
+	timeElapsedSinceLastRunInMinutes, hasPreviousRun := r.timeElapsedSinceLastRunInMinutes(&hibernator)
+	if hasPreviousRun && timeElapsedSinceLastRunInMinutes <= 1 {
+		log.Info("skipping reconciliation as time elapsed since last run is less than 1 min")
+		return ctrl.Result{RequeueAfter: requeueTime}, nil
+	}
+
+	//TODO: handle the case of resync, in case of hibernating
+	finalHibernator := &hibernator
+	updated := false
+	if !shouldHibernate /*&& hibernator.Status.IsHibernating*/ {
+		finalHibernator = r.unhibernate(hibernator)
+		updated = true
+	} else if shouldHibernate /*&& !hibernator.Status.IsHibernating*/ {
+		finalHibernator = r.hibernate(hibernator)
+		updated = true
+	} else {
+		log.Info("didnt hibernate or unhibernate - shouldHibernate: %t, timegap: %d, hibernating: %t", shouldHibernate, timeGap, hibernator.Status.IsHibernating)
+	}
+
+	if updated {
+		err = r.Client.Update(context.Background(), finalHibernator)
+		if err != nil {
+			log.Error(err, "error while updating hibernator %v")
+			return ctrl.Result{}, err
+		}
+	}
+
+	log.Info("end processing, processing parameter - start time: %v, timegap: %d, requeueTime:  %s", now, timeGap, requeueTime)
+	return ctrl.Result{RequeueAfter: requeueTime}, nil
+}
+
+//TODO: handle sync
+func (r *HibernatorReconciler) unhibernate(hibernator pincherv1alpha1.Hibernator) *pincherv1alpha1.Hibernator {
+	log := r.Log.WithValues("hibernator", r.getNamespacedName(&hibernator))
+
+	log.Info("initiating unhibernate")
+	//TODO: remove this check as it would be difficult to unhibernate all together
 	latestHistory := r.getLatestHistory(hibernator.Status.History)
 	if latestHistory.Hibernate == false {
-		return &hibernator, nil
+		return &hibernator
 	}
+	//TODO: change logic to get all objects and process those whose replicaCount is 0 and have been hibernated by us earlier
+	hibernator.Status.IsHibernating = false
+
 	var impactedObjects []pincherv1alpha1.ImpactedObject
 	for _, impactedObject := range latestHistory.ImpactedObjects {
+
 		impactedObject = pincherv1alpha1.ImpactedObject{
-			Group:         impactedObject.Group,
-			Version:       impactedObject.Version,
-			Kind:          impactedObject.Kind,
-			Name:          impactedObject.Name,
-			Namespace:     impactedObject.Namespace,
+			ResourceKey:   impactedObject.ResourceKey,
 			OriginalCount: impactedObject.OriginalCount,
 			Status:        "success",
 		}
-		objectPatch := fmt.Sprintf(patch, impactedObject.OriginalCount)
+
+		//objectPatch := fmt.Sprintf(patch, impactedObject.OriginalCount)
+		namespace, group, version, kind, name := r.componentsOfResourceKey(impactedObject.ResourceKey)
 		request := &pkg.PatchRequest{
-			Name:      impactedObject.Name,
-			Namespace: impactedObject.Namespace,
+			Name:      name,
+			Namespace: namespace,
 			GroupVersionKind: schema.GroupVersionKind{
-				Group:   impactedObject.Group,
-				Version: impactedObject.Version,
-				Kind:    impactedObject.Kind,
+				Group:   group,
+				Version: version,
+				Kind:    kind,
 			},
-			Patch:     objectPatch,
+			Patch:     fmt.Sprintf(patch, impactedObject.OriginalCount),
 			PatchType: string(types.JSONPatchType),
 		}
 		_, err := r.Kubectl.PatchResource(context.Background(), request)
 		if err != nil {
-			fmt.Printf("error err %v while deleting object %v\n", err, *request)
+			log.Error(err, "error while deleting object %v\n", *request)
 			impactedObject.Status = "error"
 			impactedObject.Message = err.Error()
 		}
+
 		impactedObjects = append(impactedObjects, impactedObject)
 	}
+
 	history := pincherv1alpha1.RevisionHistory{
 		Time:            metav1.Time{Time: time.Now()},
 		ID:              r.getNewRevisionID(hibernator.Status.History),
@@ -162,12 +194,15 @@ func (r *HibernatorReconciler) unhibernate(hibernator pincherv1alpha1.Hibernator
 		ExcludedObjects: []pincherv1alpha1.ExcludedObject{},
 	}
 	hibernator.Status.History = r.addToHistory(history, hibernator.Status.History)
-	fmt.Printf("ending unhibernate for %s\n", GetKey(hibernator))
-	return &hibernator, nil
+	log.Info("ending unhibernate")
+
+	return &hibernator
 }
 
-func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, error) {
-	fmt.Printf("starting hibernate for %s\n", GetKey(hibernator))
+//TODO: handle sync
+func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) *pincherv1alpha1.Hibernator {
+	log := r.Log.WithValues("hibernator", r.getNamespacedName(&hibernator))
+	log.Info("starting hibernate")
 	hibernator.Status.IsHibernating = true
 	var impactedObjects []pincherv1alpha1.ImpactedObject
 	var excludedObjects []pincherv1alpha1.ExcludedObject
@@ -175,33 +210,40 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 	for _, rule := range hibernator.Spec.Rules {
 		inclusions := r.getMatchingObjects(rule.Inclusions)
 		exclusions := r.getMatchingObjects(rule.Exclusions)
-		included, excluded := r.getFinalIncludedObjects(inclusions, exclusions)
+		included, excluded := r.getIncludedExcludedObjects(inclusions, exclusions)
 		//hpaTargetObjectPairs := r.fetchHPATargetObjectPairForObjects(included, mapping)
+
 		for _, ex := range excluded {
 			excludedObject := pincherv1alpha1.ExcludedObject{
-				Group:     ex.GroupVersionKind().Group,
-				Version:   ex.GroupVersionKind().Version,
-				Kind:      ex.GroupVersionKind().Kind,
-				Name:      ex.GetName(),
-				Namespace: ex.GetNamespace(),
+				ResourceKey: r.getResourceKey(ex),
 			}
 			excludedObjects = append(excludedObjects, excludedObject)
 		}
+
 		for _, inc := range included {
 			to, err := inc.MarshalJSON()
 			if err != nil {
 				continue
 			}
-			res := gjson.Get(string(to), "spec.replicas")
+
+			replicaCount := gjson.Get(string(to), "spec.replicas")
+
+			if rule.Action == "sleep" && replicaCount.Int() == 0 {
+				excludedObject := pincherv1alpha1.ExcludedObject{
+					ResourceKey: r.getResourceKey(inc),
+					Reason:      "existing replica count is zero",
+				}
+				excludedObjects = append(excludedObjects, excludedObject)
+				continue
+			}
+
 			impactedObject := pincherv1alpha1.ImpactedObject{
-				Group:         inc.GroupVersionKind().Group,
-				Version:       inc.GroupVersionKind().Version,
-				Kind:          inc.GroupVersionKind().Kind,
-				Name:          inc.GetName(),
-				Namespace:     inc.GetNamespace(),
-				OriginalCount: res.Int(),
+				ResourceKey:   r.getResourceKey(inc),
+				OriginalCount: replicaCount.Int(),
 				Status:        "success",
 			}
+
+			var requestObj string
 			if rule.Action == "sleep" {
 				request := &pkg.PatchRequest{
 					Name:             inc.GetName(),
@@ -211,13 +253,7 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 					PatchType:        string(types.JSONPatchType),
 				}
 				_, err = r.Kubectl.PatchResource(context.Background(), request)
-				if err != nil {
-					fmt.Printf("error err %v while deleting object %v\n", err, *request)
-					impactedObject.Status = "error"
-					impactedObject.Message = err.Error()
-					impactedObjects = append(impactedObjects, impactedObject)
-					continue
-				}
+				requestObj = fmt.Sprintf("%v", request)
 			} else {
 				request := &pkg.DeleteRequest{
 					Name:             inc.GetName(),
@@ -225,19 +261,16 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 					GroupVersionKind: inc.GroupVersionKind(),
 					Force:            pointer.BoolPtr(true),
 				}
-				resp, err := r.Kubectl.DeleteResource(context.Background(), request)
-				if err != nil {
-					fmt.Printf("error err %v while deleting object %v\n", err, *request)
-					impactedObject.Status = "error"
-					impactedObject.Message = err.Error()
-					impactedObjects = append(impactedObjects, impactedObject)
-					continue
-				}
-				j, _ := resp.Manifest.MarshalJSON()
-				impactedObject.RelatedDeletedObject = string(j)
+				_, err = r.Kubectl.DeleteResource(context.Background(), request)
+				requestObj = fmt.Sprintf("%v", request)
 			}
 
-			impactedObject.Status = "success"
+			if err != nil {
+				log.Error(err, "action on object %s", requestObj)
+				impactedObject.Status = "error"
+				impactedObject.Message = err.Error()
+			}
+
 			impactedObjects = append(impactedObjects, impactedObject)
 		}
 	}
@@ -256,98 +289,9 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 		ExcludedObjects: excludedObjects,
 	}
 	hibernator.Status.History = r.addToHistory(history, hibernator.Status.History)
-	fmt.Printf("ending hibernate for %s\n", GetKey(hibernator))
-	return &hibernator, nil
-}
 
-func (r *HibernatorReconciler) addToHistory(history pincherv1alpha1.RevisionHistory, revisionHistories []pincherv1alpha1.RevisionHistory) []pincherv1alpha1.RevisionHistory {
-	if len(revisionHistories) < 10 {
-		revisionHistories = append(revisionHistories, history)
-		return revisionHistories
-	}
-	minID := int64(math.MaxInt64)
-	for _, history := range revisionHistories {
-		if history.ID < minID {
-			minID = history.ID
-		}
-	}
-	var finalHistories []pincherv1alpha1.RevisionHistory
-	for _, history := range revisionHistories {
-		if history.ID != minID {
-			finalHistories = append(finalHistories, history)
-		}
-	}
-	finalHistories = append(finalHistories, history)
-	return finalHistories
-
-}
-
-func (r *HibernatorReconciler) getLatestHistory(revisionHistories []pincherv1alpha1.RevisionHistory) *pincherv1alpha1.RevisionHistory {
-	maxID := int64(-1)
-	for _, history := range revisionHistories {
-		if history.ID > maxID {
-			maxID = history.ID
-		}
-	}
-	found := false
-	var latestHistory pincherv1alpha1.RevisionHistory
-	for _, history := range revisionHistories {
-		if history.ID == maxID {
-			latestHistory = history
-			found = true
-		}
-	}
-	if !found {
-		return nil
-	}
-	return &latestHistory
-}
-
-func (r *HibernatorReconciler) getNewRevisionID(revisionHistories []pincherv1alpha1.RevisionHistory) int64 {
-	maxID := int64(-1)
-	for _, history := range revisionHistories {
-		if history.ID > maxID {
-			maxID = history.ID
-		}
-	}
-	return maxID + 1
-}
-
-func (r *HibernatorReconciler) getMatchingObjects(selectors []pincherv1alpha1.Selector) []unstructured.Unstructured {
-	var allMatches []unstructured.Unstructured
-	for _, selector := range selectors {
-		var err error
-		var matches []unstructured.Unstructured
-		if len(selector.ObjectSelector.FieldSelector) != 0 {
-			matches, err = r.handleFieldSelector(selector)
-		} else if len(selector.ObjectSelector.Labels) != 0 {
-			matches, err = r.handleLabelSelector(selector)
-		} else {
-			matches, err = r.handleSelector(selector)
-		}
-		if err != nil {
-			continue
-		}
-		allMatches = append(allMatches, matches...)
-	}
-	return allMatches
-}
-
-func (r *HibernatorReconciler) getFinalIncludedObjects(inclusions, exclusions []unstructured.Unstructured) (included []unstructured.Unstructured, excluded []unstructured.Unstructured) {
-	excludedKey := map[string]bool{}
-	for _, exclusion := range exclusions {
-		key := pkg.GetResourceKey(&exclusion)
-		excludedKey[key.String()] = true
-	}
-	for _, inclusion := range inclusions {
-		key := pkg.GetResourceKey(&inclusion)
-		if excludedKey[key.String()] {
-			excluded = append(excluded, inclusion)
-		} else {
-			included = append(included, inclusion)
-		}
-	}
-	return included, excluded
+	log.Info("ending hibernate")
+	return &hibernator
 }
 
 func (r *HibernatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -359,8 +303,4 @@ func (r *HibernatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
 type TargetObjectHPAPair struct {
 	TargetObject *unstructured.Unstructured
 	HPA          *unstructured.Unstructured
-}
-
-func GetKey(hibernator pincherv1alpha1.Hibernator) string {
-	return fmt.Sprintf("/%s/%s/%s/%s", hibernator.Namespace, hibernator.APIVersion, hibernator.Kind, hibernator.Name)
 }

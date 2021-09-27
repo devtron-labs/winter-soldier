@@ -17,164 +17,139 @@ limitations under the License.
 package pkg
 
 import (
-	"github.com/tidwall/gjson"
-	"reflect"
 	"testing"
 )
 
-func TestSplitByMathematicalAndLogicalOperator(t *testing.T) {
-	type args struct {
-		input string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    []string
-		wantErr bool
-	}{
-		{
-			name:    "testing ==",
-			args:    args{input: "name==prashant"},
-			want:    []string{"==", "name", "prashant"},
-			wantErr: false,
-		},
-		{
-			name:    "testing !=",
-			args:    args{input: "name!=prashant"},
-			want:    []string{"!=", "name", "prashant"},
-			wantErr: false,
-		},
-		{
-			name:    "testing !",
-			args:    args{input: "!name"},
-			want:    []string{"!", "name"},
-			wantErr: false,
-		},
-		{
-			name:    "testing >=",
-			args:    args{input: "name>=prashant"},
-			want:    []string{">=", "name", "prashant"},
-			wantErr: false,
-		},
-		{
-			name:    "testing <=",
-			args:    args{input: "name<=prashant"},
-			want:    []string{"<=", "name", "prashant"},
-			wantErr: false,
-		},
-		{
-			name:    "testing =>",
-			args:    args{input: "name=>prashant"},
-			want:    []string{"=>", "name", "prashant"},
-			wantErr: false,
-		},
-		{
-			name:    "testing =<",
-			args:    args{input: "name=<prashant"},
-			want:    []string{"=<", "name", "prashant"},
-			wantErr: false,
-		},
-		{
-			name:    "testing >",
-			args:    args{input: "name>prashant"},
-			want:    []string{">", "name", "prashant"},
-			wantErr: false,
-		},
-		{
-			name:    "testing <",
-			args:    args{input: "name<prashant"},
-			want:    []string{"<", "name", "prashant"},
-			wantErr: false,
-		},
-		{
-			name:    "testing ",
-			args:    args{input: "name"},
-			want:    []string{"", "name"},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := SplitByLogicalOperator(tt.args.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("SplitByLogicalOperator() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("SplitByLogicalOperator() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
 
-func TestApplyLogicalOperator(t *testing.T) {
+const pod = `
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "frontend"
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "app",
+        "image": "images.my-company.example/app:v4",
+        "resources": {
+          "requests": {
+            "memory": "64Mi",
+            "cpu": "250m"
+          },
+          "limits": {
+            "memory": "128Mi",
+            "cpu": "500m"
+          }
+        }
+      },
+      {
+        "name": "log-aggregator",
+        "image": "images.my-company.example/log-aggregator:v6",
+        "resources": {
+          "requests": {
+            "memory": "68Mi",
+            "cpu": "250m"
+          },
+          "limits": {
+            "memory": "128Mi",
+            "cpu": "500m"
+          }
+        }
+      }
+    ]
+  }
+}`
+
+const deployment = `
+{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+    "name": "nginx-deployment",
+    "labels": {
+      "app": "nginx"
+    }
+  },
+  "spec": {
+    "replicas": 3,
+    "selector": {
+      "matchLabels": {
+        "app": "nginx"
+      }
+    },
+    "template": {
+      "metadata": {
+        "labels": {
+          "app": "nginx"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "nginx",
+            "image": "nginx:1.14.2",
+            "ports": [
+              {
+                "containerPort": 80
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}`
+
+func TestExpressionEvaluator(t *testing.T) {
+
 	type args struct {
-		result gjson.Result
-		ops    []string
+		expression string
+		json       string
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    bool
-		wantErr bool
+		name string
+		args args
+		want bool
 	}{
 		{
-			name: "string",
-			args: args{
-				result: gjson.Result{
-					Type: gjson.String,
-					Str:  "Prashant",
-				},
-				ops: []string{"==", "", "Prashant"},
+			name: "base test",
+			args: args {
+				expression: "{{spec.replicas}} + {{spec.template.spec.containers.0.ports.0.containerPort}} == 80",
+				json: deployment,
 			},
-			want:    true,
-			wantErr: false,
+			want: false,
 		},
 		{
-			name: " >= ",
+			name: "string match",
 			args: args{
-				result: gjson.Result{
-					Type: gjson.Number,
-					Num:  1.0,
-				},
-				ops: []string{">=", "", "0.9"},
+				expression: "{{spec.template.spec.containers.0.name}} == 'nginx'",
+				json:       deployment,
 			},
-			want:    true,
-			wantErr: false,
+			want: true,
 		},
 		{
-			name: " exists ",
+			name: "array match",
 			args: args{
-				result: gjson.Result{
-					Raw: "",
-				},
-				ops: []string{"!", "", "0.9"},
+				expression: "any({{spec.containers.#.resources.requests}}, { .memory == '68Mi'})",
+				json:       pod,
 			},
-			want:    true,
-			wantErr: false,
+			want: true,
 		},
 		{
-			name: " <= ",
+			name: "and or match",
 			args: args{
-				result: gjson.Result{
-					Type: gjson.Number,
-					Num:  1.0,
-				},
-				ops: []string{"<=", "", "2"},
+				expression: "( {{spec.containers.0.name}} == 'app' && {{spec.containers.1.name}} == 'log-aggregator' ) || {{spec.containers.1.image}} == 'log-aggregator' ",
+				json:       pod,
 			},
-			want:    true,
-			wantErr: false,
+			want: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ApplyLogicalOperator(tt.args.result, tt.args.ops)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ApplyLogicalOperator() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("ApplyLogicalOperator() got = %v, want %v", got, tt.want)
+			if got := ExpressionEvaluator(tt.args.expression, tt.args.json); got != tt.want {
+				t.Errorf("ExpressionEvaluator() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -27,57 +27,58 @@ import (
 type HibernatorSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-
-	TimeRangesWithZone TimeRangesWithZone `json:"time_ranges_with_zone,omitempty"`
-	Rules              []Rule             `json:"rules"`
-	UnHibernate        bool               `json:"reset,omitempty"`
-	ReSyncInterval     int                `json:"reSync_interval,omitempty"`
-	Pause              bool               `json:"pause,omitempty"`
-	PauseUntil         TimeRange          `json:"pause_until,omitempty"`
+	When                 TimeRangesWithZone `json:"timeRangesWithZone,omitempty"`
+	Rules                []Rule             `json:"rules"`
+	Hibernate            bool               `json:"hibernate,omitempty"`
+	UnHibernate          bool               `json:"unHibernate,omitempty"`
+	ReSyncInterval       int                `json:"reSyncInterval,omitempty"`
+	Pause                bool               `json:"pause,omitempty"`
+	PauseUntil           DateTimeWithZone   `json:"pauseUntil,omitempty"`
+	RevisionHistoryLimit int                `json:"revisionHistoryLimit"`
 }
 
 type Rule struct {
 	Inclusions  []Selector `json:"inclusions"`
 	Exclusions  []Selector `json:"exclusions,omitempty"`
-	Action      `json:"action"`
-	DeleteStore bool `json:"delete_store,omitempty"`
+	Action      Action     `json:"action"`
+	DeleteStore bool       `json:"deleteStore,omitempty"`
+}
+
+type DateTimeWithZone struct {
+	DateTime string `json:"dateTime"`
+	TimeZone string `json:"timeZone"`
 }
 
 type TimeRangesWithZone struct {
-	TimeRanges []TimeRange `json:"time_ranges"`
-	TimeZone   string      `json:"timezone,omitempty"`
+	TimeRanges []TimeRange `json:"timeRanges"`
+	TimeZone   string      `json:"timeZone,omitempty"`
 }
 
 type TimeRange struct {
-	TimeZone       string  `json:"timezone,omitempty"`
-	TimeFrom       string  `json:"time_from"`
-	TimeTo         string  `json:"time_to"`
-	CronExpression string  `json:"cron_expression,omitempty"`
-	WeekdayFrom    Weekday `json:"weekday_from"`
-	WeekdayTo      Weekday `json:"weekday_to"`
+	TimeZone       string  `json:"timeZone,omitempty"`
+	TimeFrom       string  `json:"timeFrom"`
+	TimeTo         string  `json:"timeTo"`
+	CronExpression string  `json:"cronExpression,omitempty"`
+	WeekdayFrom    Weekday `json:"weekdayFrom"`
+	WeekdayTo      Weekday `json:"weekdayTo"`
 }
 
 type Selector struct {
-	ObjectSelector    ObjectSelector    `json:"object_selector"`
-	NamespaceSelector NamespaceSelector `json:"namespace_selector,omitempty"`
-	//Labels            []string          `json:"labels,omitempty"`
-	//Name              string            `json:"name,omitempty"`
-	//Namespace         string            `json:"namespace"`
-	//Type              string            `json:"type"`
-	//FieldSelector     []string          `json:"field_selector,omitempty"`
+	ObjectSelector    ObjectSelector    `json:"objectSelector"`
+	NamespaceSelector NamespaceSelector `json:"namespaceSelector,omitempty"`
 }
 
 type ObjectSelector struct {
 	Labels        []string `json:"labels,omitempty"`
 	Name          string   `json:"name,omitempty"`
 	Type          string   `json:"type"`
-	FieldSelector []string `json:"field_selector,omitempty"`
+	FieldSelector []string `json:"fieldSelector,omitempty"`
 }
 
 type NamespaceSelector struct {
 	Labels        []string `json:"labels,omitempty"`
 	Name          string   `json:"name,omitempty"`
-	FieldSelector []string `json:"field_selector,omitempty"`
+	FieldSelector []string `json:"fieldSelector,omitempty"`
 }
 
 // HibernatorStatus defines the observed state of Hibernator
@@ -87,36 +88,38 @@ type HibernatorStatus struct {
 	History       []RevisionHistory `json:"history"`
 	Status        string            `json:"status"`
 	Message       string            `json:"message"`
-	IsHibernating bool              `json:"is_hibernating"`
+	IsHibernating bool              `json:"isHibernating"`
 }
 
 type ImpactedObject struct {
-	Group                string `json:"group"`
-	Version              string `json:"version"`
-	Kind                 string `json:"kind"`
-	Name                 string `json:"name"`
-	Namespace            string `json:"namespace"`
-	OriginalCount        int64  `json:"original_count"`
-	RelatedDeletedObject string `json:"related_deleted_object"`
+	ResourceKey string `json:"resourceKey"`
+	//Group                string `json:"group"`
+	//Version              string `json:"version"`
+	//Kind                 string `json:"kind"`
+	//Name                 string `json:"name"`
+	//Namespace            string `json:"namespace"`
+	OriginalCount        int64  `json:"originalCount"`
+	RelatedDeletedObject string `json:"relatedDeletedObject"`
 	Message              string `json:"message"`
 	Status               string `json:"status"`
 }
 
 type ExcludedObject struct {
-	Group     string `json:"group"`
-	Version   string `json:"version"`
-	Kind      string `json:"kind"`
-	Name      string `json:"name"`
-	Namespace string `json:"namespace"`
-	Reason    string `json:"reason"`
+	ResourceKey string `json:"resourceKey"`
+	//Group       string `json:"group"`
+	//Version     string `json:"version"`
+	//Kind        string `json:"kind"`
+	//Name        string `json:"name"`
+	//Namespace   string `json:"namespace"`
+	Reason string `json:"reason"`
 }
 
 type RevisionHistory struct {
 	Time            metav1.Time      `json:"time"`
 	ID              int64            `json:"id"`
 	Hibernate       bool             `json:"hibernate"`
-	ImpactedObjects []ImpactedObject `json:"impacted_objects"`
-	ExcludedObjects []ExcludedObject `json:"excluded_objects"`
+	ImpactedObjects []ImpactedObject `json:"impactedObjects"`
+	ExcludedObjects []ExcludedObject `json:"excludedObjects"`
 }
 
 // +kubebuilder:object:root=true

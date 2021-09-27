@@ -117,7 +117,7 @@ func (w Weekday) toOrdinal() int {
 }
 
 
-func (t TimeRangesWithZone) NearestTimeGap(instant time.Time) (int, bool, error) {
+func (t TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) (int, bool, error) {
 	zone := "UTC"
 	if len(t.TimeZone) != 0 {
 		zone = t.TimeZone
@@ -132,7 +132,7 @@ func (t TimeRangesWithZone) NearestTimeGap(instant time.Time) (int, bool, error)
 	normalizedTimeRanges := t.normalizeTimeRange()
 	var matchedTimeRange *TimeRange
 	for _, tr := range normalizedTimeRanges {
-		timeGap, contains, err := tr.NearestTimeGap(timeWithZone)
+		timeGap, contains, err := tr.NearestTimeGapInSeconds(timeWithZone)
 		if err != nil {
 			return -1, false, err
 		}
@@ -174,7 +174,7 @@ func (t TimeRangesWithZone) normalizeTimeRange() []TimeRange {
 	return normalizedTimeRanges
 }
 
-func (t TimeRange) NearestTimeGap(instant time.Time) (int, bool, error) {
+func (t TimeRange) NearestTimeGapInSeconds(instant time.Time) (int, bool, error) {
 	inRange := false
 	timeGap := -1
 	instantInSeconds := /*dayOfWeekToSeconds(int(instant.Weekday())) +*/ hourToSeconds(instant.Hour()) + minToSeconds(instant.Minute()) + instant.Second()

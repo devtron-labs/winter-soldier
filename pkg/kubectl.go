@@ -71,19 +71,6 @@ func (k *kubectl) ListResources(ctx context.Context, r *ListRequest) (*ListRespo
 	if err != nil {
 		return nil, err
 	}
-	//var manifests []string
-	//for i, _ := range resourceList.Items {
-	//	item := &resourceList.Items[i]
-	//	//item, err := replaceSecretValues(item)
-	//	//if err != nil {
-	//	//	return nil, err
-	//	//}
-	//	data, err := json.Marshal(item.Object)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	manifests = append(manifests, string(data))
-	//}
 	return &ListResponse{Manifests: resourceList.Items}, nil
 }
 
@@ -102,16 +89,9 @@ func (k *kubectl) GetResource(ctx context.Context, r *GetRequest) (*ManifestResp
 	}
 	resource := r.GroupVersionKind.GroupVersion().WithResource(apiResource.Name)
 	obj, err := dynamicIf.Resource(resource).Namespace(r.Namespace).Get(ctx, r.Name, metav1.GetOptions{})
-	//obj, err := k.kubectl.GetResource(ctx, k.restConfig, r.GroupVersionKind, r.Name, r.Namespace)
 	if err != nil {
 		return nil, err
 	}
-	//obj, err = replaceSecretValues(obj)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//logCtx := log.WithField("gkv", r.GroupVersionKind).WithField("name", r.Name).WithField("namespace", r.Namespace)
-	//logCtx.Infof("final data %s", string(data))
 	return &ManifestResponse{*obj}, nil
 }
 
