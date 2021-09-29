@@ -32,15 +32,20 @@ func (r *HibernatorReconciler) getNewRevisionID(revisionHistories []v1alpha1.Rev
 	return maxID + 1
 }
 
+//TODO: if last entry in history is same as the new entry for example both has hibernate==true then merge them
 func (r *HibernatorReconciler) addToHistory(history v1alpha1.RevisionHistory, revisionHistories []v1alpha1.RevisionHistory) []v1alpha1.RevisionHistory {
 	if len(revisionHistories) < 10 {
 		revisionHistories = append(revisionHistories, history)
 		return revisionHistories
 	}
 	minID := int64(math.MaxInt64)
+	maxID := int64(-1)
 	for _, history := range revisionHistories {
 		if history.ID < minID {
 			minID = history.ID
+		}
+		if history.ID > maxID {
+			maxID = history.ID
 		}
 	}
 	var finalHistories []v1alpha1.RevisionHistory

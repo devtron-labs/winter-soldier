@@ -119,7 +119,6 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 		fields  fields
 		args    args
 		want    *pincherv1alpha1.Hibernator
-		wantErr bool
 	}{
 		{
 			name: "hibernate sleep test",
@@ -153,11 +152,7 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 				Kubectl: tt.fields.kubectl,
 				Mapper:  tt.fields.mapper,
 			}
-			got, err := r.hibernate(tt.args.hibernator)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("hibernate() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			got := r.hibernate(&tt.args.hibernator)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("hibernate() got = %v, want %v", got, tt.want)
 			}

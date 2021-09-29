@@ -120,10 +120,10 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 	finalHibernator := &hibernator
 	updated := false
 	if !shouldHibernate /*&& hibernator.Status.IsHibernating*/ {
-		finalHibernator = r.unhibernate(hibernator)
+		finalHibernator = r.unhibernate(&hibernator)
 		updated = true
 	} else if shouldHibernate /*&& !hibernator.Status.IsHibernating*/ {
-		finalHibernator = r.hibernate(hibernator)
+		finalHibernator = r.hibernate(&hibernator)
 		updated = true
 	} else {
 		log.Info("didnt hibernate or unhibernate - shouldHibernate: %t, timegap: %d, hibernating: %t", shouldHibernate, timeGap, hibernator.Status.IsHibernating)
@@ -142,14 +142,14 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 }
 
 //TODO: handle sync
-func (r *HibernatorReconciler) unhibernate(hibernator pincherv1alpha1.Hibernator) *pincherv1alpha1.Hibernator {
-	log := r.Log.WithValues("hibernator", r.getNamespacedName(&hibernator))
+func (r *HibernatorReconciler) unhibernate(hibernator *pincherv1alpha1.Hibernator) *pincherv1alpha1.Hibernator {
+	log := r.Log.WithValues("hibernator", r.getNamespacedName(hibernator))
 
 	log.Info("initiating unhibernate")
 	//TODO: remove this check as it would be difficult to unhibernate all together
 	latestHistory := r.getLatestHistory(hibernator.Status.History)
 	if latestHistory.Hibernate == false {
-		return &hibernator
+		return hibernator
 	}
 	//TODO: change logic to get all objects and process those whose replicaCount is 0 and have been hibernated by us earlier
 	hibernator.Status.IsHibernating = false
@@ -196,12 +196,12 @@ func (r *HibernatorReconciler) unhibernate(hibernator pincherv1alpha1.Hibernator
 	hibernator.Status.History = r.addToHistory(history, hibernator.Status.History)
 	log.Info("ending unhibernate")
 
-	return &hibernator
+	return hibernator
 }
 
 //TODO: handle sync
-func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) *pincherv1alpha1.Hibernator {
-	log := r.Log.WithValues("hibernator", r.getNamespacedName(&hibernator))
+func (r *HibernatorReconciler) hibernate(hibernator *pincherv1alpha1.Hibernator) *pincherv1alpha1.Hibernator {
+	log := r.Log.WithValues("hibernator", r.getNamespacedName(hibernator))
 	log.Info("starting hibernate")
 	hibernator.Status.IsHibernating = true
 	var impactedObjects []pincherv1alpha1.ImpactedObject
@@ -291,7 +291,7 @@ func (r *HibernatorReconciler) hibernate(hibernator pincherv1alpha1.Hibernator) 
 	hibernator.Status.History = r.addToHistory(history, hibernator.Status.History)
 
 	log.Info("ending hibernate")
-	return &hibernator
+	return hibernator
 }
 
 func (r *HibernatorReconciler) SetupWithManager(mgr ctrl.Manager) error {
