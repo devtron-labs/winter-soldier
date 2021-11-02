@@ -17,7 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -28,20 +28,20 @@ type HibernatorSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	When                 TimeRangesWithZone `json:"timeRangesWithZone,omitempty"`
-	Rules                []Rule             `json:"rules"`
+	Selectors            []Rule             `json:"selectors"`
 	Hibernate            bool               `json:"hibernate,omitempty"`
 	UnHibernate          bool               `json:"unHibernate,omitempty"`
 	ReSyncInterval       int                `json:"reSyncInterval,omitempty"`
 	Pause                bool               `json:"pause,omitempty"`
 	PauseUntil           DateTimeWithZone   `json:"pauseUntil,omitempty"`
 	RevisionHistoryLimit int                `json:"revisionHistoryLimit"`
+	Action               Action             `json:"action"`
+	DeleteStore          bool               `json:"deleteStore,omitempty"`
 }
 
 type Rule struct {
-	Inclusions  []Selector `json:"inclusions"`
-	Exclusions  []Selector `json:"exclusions,omitempty"`
-	Action      Action     `json:"action"`
-	DeleteStore bool       `json:"deleteStore,omitempty"`
+	Inclusions []Selector `json:"inclusions"`
+	Exclusions []Selector `json:"exclusions,omitempty"`
 }
 
 type DateTimeWithZone struct {
@@ -55,12 +55,13 @@ type TimeRangesWithZone struct {
 }
 
 type TimeRange struct {
-	TimeZone       string  `json:"timeZone,omitempty"`
-	TimeFrom       string  `json:"timeFrom"`
-	TimeTo         string  `json:"timeTo"`
-	CronExpression string  `json:"cronExpression,omitempty"`
-	WeekdayFrom    Weekday `json:"weekdayFrom"`
-	WeekdayTo      Weekday `json:"weekdayTo"`
+	TimeZone           string  `json:"timeZone,omitempty"`
+	TimeFrom           string  `json:"timeFrom"`
+	TimeTo             string  `json:"timeTo"`
+	CronExpressionFrom string  `json:"cronExpressionFrom,omitempty"`
+	CronExpressionTo   string  `json:"cronExpressionTo,omitempty"`
+	WeekdayFrom        Weekday `json:"weekdayFrom"`
+	WeekdayTo          Weekday `json:"weekdayTo"`
 }
 
 type Selector struct {
@@ -89,6 +90,7 @@ type HibernatorStatus struct {
 	Status        string            `json:"status"`
 	Message       string            `json:"message"`
 	IsHibernating bool              `json:"isHibernating"`
+	Action        Action            `json:"action"`
 }
 
 type ImpactedObject struct {
@@ -98,7 +100,7 @@ type ImpactedObject struct {
 	//Kind                 string `json:"kind"`
 	//Name                 string `json:"name"`
 	//Namespace            string `json:"namespace"`
-	OriginalCount        int64  `json:"originalCount"`
+	OriginalCount        int    `json:"originalCount"`
 	RelatedDeletedObject string `json:"relatedDeletedObject"`
 	Message              string `json:"message"`
 	Status               string `json:"status"`
@@ -115,9 +117,9 @@ type ExcludedObject struct {
 }
 
 type RevisionHistory struct {
-	Time            metav1.Time      `json:"time"`
+	Time            metaV1.Time      `json:"time"`
 	ID              int64            `json:"id"`
-	Hibernate       bool             `json:"hibernate"`
+	Action          Action           `json:"action"`
 	ImpactedObjects []ImpactedObject `json:"impactedObjects"`
 	ExcludedObjects []ExcludedObject `json:"excludedObjects"`
 }
@@ -127,8 +129,8 @@ type RevisionHistory struct {
 
 // Hibernator is the Schema for the hibernators API
 type Hibernator struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metaV1.TypeMeta   `json:",inline"`
+	metaV1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   HibernatorSpec   `json:"spec,omitempty"`
 	Status HibernatorStatus `json:"status,omitempty"`
@@ -138,16 +140,17 @@ type Hibernator struct {
 
 // HibernatorList contains a list of Hibernator
 type HibernatorList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metaV1.TypeMeta `json:",inline"`
+	metaV1.ListMeta `json:"metadata,omitempty"`
 	Items           []Hibernator `json:"items"`
 }
 
 type Action string
 
 const (
-	Delete Action = "delete"
-	Sleep  Action = "sleep"
+	Delete      Action = "delete"
+	Hibernate   Action = "hibernate"
+	UnHibernate Action = "unhibernate"
 )
 
 type Weekday string

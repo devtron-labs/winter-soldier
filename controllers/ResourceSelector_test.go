@@ -20,33 +20,26 @@ import (
 	"fmt"
 	"github.com/devtron-labs/winter-soldier/api/v1alpha1"
 	"github.com/devtron-labs/winter-soldier/pkg"
-	"github.com/go-logr/logr"
-	"github.com/tidwall/gjson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 )
 
 func TestHibernatorReconciler_handleLabelSelector(t *testing.T) {
 	rule := v1alpha1.Selector{
 		ObjectSelector: v1alpha1.ObjectSelector{
-			Labels:        []string{"app=nats-streaming"},
+			Labels:        []string{"app=web"},
 			Name:          "",
-			Type:          "sts",
+			Type:          "deployment",
 			FieldSelector: nil,
 		},
 		NamespaceSelector: v1alpha1.NamespaceSelector{
-			Name:     "devtroncd",
+			Name: "pras",
 		},
 	}
 	type fields struct {
-		Client  client.Client
-		Log     logr.Logger
-		Scheme  *runtime.Scheme
 		kubectl pkg.KubectlCmd
 		mapper  *pkg.Mapper
+		factory func(mapper *pkg.Mapper) pkg.ArgsProcessor
 	}
 	type args struct {
 		rule v1alpha1.Selector
@@ -59,25 +52,24 @@ func TestHibernatorReconciler_handleLabelSelector(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "select sts",
+			name: "select deployment",
 			fields: fields{
-				Client:  nil,
-				Log:     nil,
-				Scheme:  nil,
-				kubectl: pkg.NewKubectl(),
-				mapper:  pkg.NewMapperFactory(),
+				kubectl: pkg.NewKubectlMock(pkg.DeploymentObjectsMock),
+				mapper:  pkg.NewMockMapperFactory(),
+				factory: pkg.NewMockFactory,
 			},
 			args: args{rule: rule},
+			want: []*unstructured.Unstructured{
+				{Object: map[string]interface{}{"metadata": map[string]interface{}{"name": "rss-site"}}},
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &HibernatorReconciler{
-				Client:  tt.fields.Client,
-				Log:     tt.fields.Log,
-				Scheme:  tt.fields.Scheme,
+			r := &ResourceSelectorImpl{
 				Kubectl: tt.fields.kubectl,
 				Mapper:  tt.fields.mapper,
+				factory: tt.fields.factory,
 			}
 			got, err := r.handleLabelSelector(tt.args.rule)
 			fmt.Println(got)
@@ -85,28 +77,36 @@ func TestHibernatorReconciler_handleLabelSelector(t *testing.T) {
 				t.Errorf("handleLabelSelector() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			if len(got) != len(tt.want) {
 				t.Errorf("handleLabelSelector() got = %v, want %v", got, tt.want)
+			}
+			gotKeys := make(map[string]bool, 0)
+			wantKeys := make(map[string]bool, 0)
+			for _, g := range got {
+				gotKeys[g.GetName()] = true
+			}
+			for _, w := range tt.want {
+				wantKeys[w.GetName()] = true
+			}
+			for k := range gotKeys {
+				if !wantKeys[k] {
+					t.Errorf("handleLabelSelector() excess key %s", k)
+				}
+			}
+			for k := range wantKeys {
+				if !gotKeys[k] {
+					t.Errorf("handleLabelSelector() missing key %s", k)
+				}
 			}
 		})
 	}
 }
 
 func TestHibernatorReconciler_handleFieldSelector(t *testing.T) {
-	//js := `{"person":{"name": "abcd", "age": 12}}`
-	//var obj map[string]interface{}
-	//err := json.Unmarshal([]byte(js), &obj)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-	//uns := unstructured.Unstructured{Object: obj}
 	type fields struct {
-		Client  client.Client
-		Log     logr.Logger
-		Scheme  *runtime.Scheme
 		kubectl pkg.KubectlCmd
 		mapper  *pkg.Mapper
+		factory func(mapper *pkg.Mapper) pkg.ArgsProcessor
 	}
 	type args struct {
 		rule v1alpha1.Selector
@@ -115,58 +115,63 @@ func TestHibernatorReconciler_handleFieldSelector(t *testing.T) {
 		name    string
 		fields  fields
 		args    args
-		want   []string
+		want    []*unstructured.Unstructured
 		wantErr bool
 	}{
 		{
 			name: "label with field selector",
 			fields: fields{
-				kubectl: pkg.NewKubectl(),
-				mapper: pkg.NewMapperFactory(),
+				kubectl: pkg.NewKubectlMock(pkg.DeploymentObjectsMock),
+				mapper:  pkg.NewMockMapperFactory(),
+				factory: pkg.NewMockFactory,
 			},
 			args: args{rule: v1alpha1.Selector{
 				ObjectSelector: v1alpha1.ObjectSelector{
-					Labels:        []string{"app=nats-streaming"},
+					Labels:        []string{"app=nginx"},
 					Name:          "",
-					Type:          "sts",
-					FieldSelector: []string{"metadata.name==nats-streaming-demo-devtroncd-nats-streaming"},
+					Type:          "deployment",
+					FieldSelector: []string{"{{spec.replicas}}==3"},
 				},
 				NamespaceSelector: v1alpha1.NamespaceSelector{
-					Name:     "devtroncd",
+					Name: "pras",
 				},
 			}},
-			want:    []string{"nats-streaming-demo-devtroncd-nats-streaming"},
+			want: []*unstructured.Unstructured{
+				{Object: map[string]interface{}{"metadata": map[string]interface{}{"name": "nginx"}}},
+			},
 			wantErr: false,
 		},
 		{
 			name: "field selector without label and name",
 			fields: fields{
-				kubectl: pkg.NewKubectl(),
-				mapper: pkg.NewMapperFactory(),
+				kubectl: pkg.NewKubectlMock(pkg.DeploymentObjectsMock),
+				mapper:  pkg.NewMockMapperFactory(),
+				factory: pkg.NewMockFactory,
 			},
 			args: args{rule: v1alpha1.Selector{
 				ObjectSelector: v1alpha1.ObjectSelector{
 					Labels:        []string{},
 					Name:          "",
-					Type:          "sts",
-					FieldSelector: []string{"metadata.name==nats-streaming-demo-devtroncd-nats-streaming"},
+					Type:          "deployment",
+					FieldSelector: []string{"{{spec.replicas}}==3"},
 				},
 				NamespaceSelector: v1alpha1.NamespaceSelector{
-					Name:     "devtroncd",
+					Name: "pras",
 				},
 			}},
-			want:    []string{"nats-streaming-demo-devtroncd-nats-streaming"},
+			want: []*unstructured.Unstructured{
+				{Object: map[string]interface{}{"metadata": map[string]interface{}{"name": "nginx-deployment"}}},
+				{Object: map[string]interface{}{"metadata": map[string]interface{}{"name": "nginx"}}},
+			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &HibernatorReconciler{
-				Client:  tt.fields.Client,
-				Log:     tt.fields.Log,
-				Scheme:  tt.fields.Scheme,
+			r := &ResourceSelectorImpl{
 				Kubectl: tt.fields.kubectl,
 				Mapper:  tt.fields.mapper,
+				factory: tt.fields.factory,
 			}
 			got, err := r.handleFieldSelector(tt.args.rule)
 			if (err != nil) != tt.wantErr {
@@ -176,18 +181,17 @@ func TestHibernatorReconciler_handleFieldSelector(t *testing.T) {
 			if len(got) != len(tt.want) {
 				t.Errorf("handleFieldSelector() got = %v, want %v", got, tt.want)
 			}
-			expt := map[string]bool{}
-			for _, w := range tt.want {
-				expt[w] = true
-			}
+			gotKeys := make(map[string]bool, 0)
+			wantKeys := make(map[string]bool, 0)
 			for _, g := range got {
-				j, err := g.MarshalJSON()
-				if err != nil {
-					t.Errorf("%+v",err)
-				}
-				name := gjson.Get(string(j), "metadata.name")
-				if !expt[name.Str] {
-					t.Errorf("not found %s is %v", name.Str, tt.want)
+				gotKeys[g.GetName()] = true
+			}
+			for _, w := range tt.want {
+				wantKeys[w.GetName()] = true
+			}
+			for k := range gotKeys {
+				if !wantKeys[k] {
+					t.Errorf("handleLabelSelector() excess key %s", k)
 				}
 			}
 		})

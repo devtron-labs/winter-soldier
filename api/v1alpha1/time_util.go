@@ -26,6 +26,7 @@ import (
 const (
 	firstDayOfWeek = 0
 	lastDayOfWeek = 6
+	MinReSyncIntervalInSeconds = 60
 )
 func (t TimeRangesWithZone) Contains(instant time.Time) (bool, error) {
 	zone := "UTC"
@@ -177,7 +178,7 @@ func (t TimeRangesWithZone) normalizeTimeRange() []TimeRange {
 func (t TimeRange) NearestTimeGapInSeconds(instant time.Time) (int, bool, error) {
 	inRange := false
 	timeGap := -1
-	instantInSeconds := /*dayOfWeekToSeconds(int(instant.Weekday())) +*/ hourToSeconds(instant.Hour()) + minToSeconds(instant.Minute()) + instant.Second()
+	instantInSeconds := hourToSeconds(instant.Hour()) + minToSeconds(instant.Minute()) + instant.Second()
 	startTimeInSeconds, err := t.toSeconds(t.TimeFrom)
 	if err != nil {
 		return timeGap, inRange, err
@@ -218,7 +219,6 @@ func cloneTimeRange(timeRange TimeRange) TimeRange {
 		TimeZone:       timeRange.TimeZone,
 		TimeFrom:       timeRange.TimeFrom,
 		TimeTo:         timeRange.TimeTo,
-		CronExpression: timeRange.CronExpression,
 		WeekdayFrom:    timeRange.WeekdayFrom,
 		WeekdayTo:      timeRange.WeekdayTo,
 	}

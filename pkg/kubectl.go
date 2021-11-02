@@ -50,7 +50,7 @@ type kubectl struct {
 	extensionsClientset *clientset.Clientset
 }
 
-func NewKubectl() *kubectl {
+func NewKubectl() KubectlCmd {
 	restConfig := ctrl.GetConfigOrDie()
 	extensionsClientset, err := clientset.NewForConfig(restConfig)
 	if err != nil {

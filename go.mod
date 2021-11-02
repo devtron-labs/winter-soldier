@@ -4,8 +4,8 @@ go 1.13
 
 require (
 	github.com/antonmedv/expr v1.9.0
+	github.com/evanphx/json-patch v4.9.0+incompatible
 	github.com/go-logr/logr v0.1.0
-	github.com/json-iterator/go v1.1.10
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/tidwall/gjson v1.9.1

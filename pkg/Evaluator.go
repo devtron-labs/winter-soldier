@@ -86,10 +86,10 @@ func ExpressionEvaluator(expression, json string) bool {
 	for i, re := range res {
 		variablesWithValue[variables[i]] = re.Value()
 	}
-	fmt.Println(expression)
-	fmt.Println(finalExpression)
-	fmt.Println(variables)
-	fmt.Println(variablesWithValue)
+	//fmt.Println(expression)
+	//fmt.Println(finalExpression)
+	//fmt.Println(variables)
+	//fmt.Println(variablesWithValue)
 	variablesWithValue["CpuToNumber"] = CpuToNumber
 	variablesWithValue["MemoryToNumber"] = MemoryToNumber
 	variablesWithValue["ParseTime"] = ParseTime
@@ -157,41 +157,6 @@ func AddTime(t *time.Time, period string) (*time.Time, error) {
 		} else {
 			numeral += string(chars[i])
 		}
-		//switch chars[i] {
-		//case 'd':
-		//	d, err := strconv.Atoi(numeral)
-		//	if err != nil {
-		//		return nil, err
-		//	}
-		//	s := d * 24 * 60 * 60
-		//	duration += s
-		//	numeral = ""
-		//case 'h':
-		//	h, err := strconv.Atoi(numeral)
-		//	if err != nil {
-		//		return nil, err
-		//	}
-		//	s := h * 60 * 60
-		//	duration += s
-		//	numeral = ""
-		//case 'm':
-		//	m, err := strconv.Atoi(numeral)
-		//	if err != nil {
-		//		return nil, err
-		//	}
-		//	s := m * 60
-		//	duration += s
-		//	numeral = ""
-		//case 's':
-		//	s, err := strconv.Atoi(numeral)
-		//	if err != nil {
-		//		return nil, err
-		//	}
-		//	duration += s
-		//	numeral = ""
-		//default:
-		//	numeral += string(chars[i])
-		//}
 	}
 	if chars[0] == '-' {
 		duration *= -1

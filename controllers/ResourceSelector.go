@@ -25,8 +25,31 @@ import (
 	"strings"
 )
 
-func (r *HibernatorReconciler) handleLabelSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
-	factory := pkg.NewFactory(r.Mapper)
+type ResourceSelector interface {
+	handleLabelSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error)
+	handleFieldSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error)
+	handleSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error)
+	getNamespaces(rule pincherv1alpha1.Selector, factory pkg.ArgsProcessor) ([]string, error)
+	getMatchingObjects(selectors []pincherv1alpha1.Selector) []unstructured.Unstructured
+	getIncludedExcludedObjects(inclusions, exclusions []unstructured.Unstructured) (included []unstructured.Unstructured, excluded []unstructured.Unstructured)
+}
+
+func NewResourceSelectorImpl(Kubectl pkg.KubectlCmd, Mapper *pkg.Mapper, factory func(mapper *pkg.Mapper) pkg.ArgsProcessor) ResourceSelector {
+	return &ResourceSelectorImpl{
+		Kubectl: Kubectl,
+		Mapper:  Mapper,
+		factory: factory,
+	}
+}
+
+type ResourceSelectorImpl struct {
+	Kubectl pkg.KubectlCmd
+	Mapper  *pkg.Mapper
+	factory  func(mapper *pkg.Mapper) pkg.ArgsProcessor
+}
+
+func (r *ResourceSelectorImpl) handleLabelSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
+	factory := r.factory(r.Mapper)
 	types := strings.Split(rule.ObjectSelector.Type, ",")
 	namespaces, err := r.getNamespaces(rule, factory)
 	if err != nil {
@@ -50,16 +73,14 @@ func (r *HibernatorReconciler) handleLabelSelector(rule pincherv1alpha1.Selector
 			if err != nil {
 				continue
 			}
-			for _, m := range resp.Manifests {
-				manifests = append(manifests, m)
-			}
+			manifests = append(manifests, resp.Manifests...)
 		}
 	}
 
 	return manifests, nil
 }
 
-func (r *HibernatorReconciler) handleFieldSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
+func (r *ResourceSelectorImpl) handleFieldSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
 	var resp []unstructured.Unstructured
 	var err error
 	if len(rule.ObjectSelector.Labels) > 0 {
@@ -90,8 +111,8 @@ func (r *HibernatorReconciler) handleFieldSelector(rule pincherv1alpha1.Selector
 	return matchedObjects, nil
 }
 
-func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
-	factory := pkg.NewFactory(r.Mapper)
+func (r *ResourceSelectorImpl) handleSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
+	factory := r.factory(r.Mapper)
 	types := strings.Split(rule.ObjectSelector.Type, ",")
 	namespaces, err := r.getNamespaces(rule, factory)
 	if err != nil {
@@ -138,9 +159,7 @@ func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]
 				if err != nil {
 					continue
 				}
-				for _, m := range resp.Manifests {
-					manifests = append(manifests, m)
-				}
+				manifests = append(manifests, resp.Manifests...)
 			}
 		}
 		return manifests, nil
@@ -148,7 +167,7 @@ func (r *HibernatorReconciler) handleSelector(rule pincherv1alpha1.Selector) ([]
 	return nil, nil
 }
 
-func (r *HibernatorReconciler) getNamespaces(rule pincherv1alpha1.Selector, factory *pkg.ArgsProcessor) ([]string, error) {
+func (r *ResourceSelectorImpl) getNamespaces(rule pincherv1alpha1.Selector, factory pkg.ArgsProcessor) ([]string, error) {
 	var namespaces []string
 	if rule.NamespaceSelector.Name == "all" || len(rule.NamespaceSelector.Name) == 0 {
 		resourceMapping, _ := factory.MappingFor("ns")
@@ -175,7 +194,7 @@ func (r *HibernatorReconciler) getNamespaces(rule pincherv1alpha1.Selector, fact
 	return namespaces, nil
 }
 
-func (r *HibernatorReconciler) getMatchingObjects(selectors []pincherv1alpha1.Selector) []unstructured.Unstructured {
+func (r *ResourceSelectorImpl) getMatchingObjects(selectors []pincherv1alpha1.Selector) []unstructured.Unstructured {
 	var allMatches []unstructured.Unstructured
 	for _, selector := range selectors {
 		var err error
@@ -195,7 +214,7 @@ func (r *HibernatorReconciler) getMatchingObjects(selectors []pincherv1alpha1.Se
 	return allMatches
 }
 
-func (r *HibernatorReconciler) getIncludedExcludedObjects(inclusions, exclusions []unstructured.Unstructured) (included []unstructured.Unstructured, excluded []unstructured.Unstructured) {
+func (r *ResourceSelectorImpl) getIncludedExcludedObjects(inclusions, exclusions []unstructured.Unstructured) (included []unstructured.Unstructured, excluded []unstructured.Unstructured) {
 	excludedKey := map[string]bool{}
 	for _, exclusion := range exclusions {
 		key := pkg.GetResourceKey(&exclusion)
@@ -211,4 +230,3 @@ func (r *HibernatorReconciler) getIncludedExcludedObjects(inclusions, exclusions
 	}
 	return included, excluded
 }
-
