@@ -23,10 +23,10 @@ import (
 
 func TestTimeRangesWithZone_Contains(t1 *testing.T) {
 	tr1 := TimeRange{
-		TimeFrom:       "18:00",
-		TimeTo:         "20",
-		WeekdayFrom:    "Fri",
-		WeekdayTo:      "Sat",
+		TimeFrom:    "18:00",
+		TimeTo:      "20",
+		WeekdayFrom: "Fri",
+		WeekdayTo:   "Sat",
 	}
 	const layout = "Jan 2, 2006 at 3:04pm (IST)"
 	tm, _ := time.Parse(layout, "Mar 27, 2021 at 12:45pm (IST)")
@@ -97,34 +97,34 @@ func TestTimeRangesWithZone_Contains(t1 *testing.T) {
 
 func TestTimeRangesWithZone_NearestTimeGap(t1 *testing.T) {
 	tr1 := TimeRange{
-		TimeFrom:       "18:00",
-		TimeTo:         "20",
-		WeekdayFrom:    "Fri",
-		WeekdayTo:      "Sat",
+		TimeFrom:    "18:00",
+		TimeTo:      "20",
+		WeekdayFrom: "Fri",
+		WeekdayTo:   "Sat",
 	}
 	tr2 := TimeRange{
-		TimeFrom:       "15:00",
-		TimeTo:         "21",
-		WeekdayFrom:    "Tue",
-		WeekdayTo:      "Fri",
+		TimeFrom:    "15:00",
+		TimeTo:      "21",
+		WeekdayFrom: "Tue",
+		WeekdayTo:   "Fri",
 	}
 	tr3 := TimeRange{
-		TimeFrom:       "15:00",
-		TimeTo:         "21",
-		WeekdayFrom:    "Mon",
-		WeekdayTo:      "Wed",
+		TimeFrom:    "15:00",
+		TimeTo:      "21",
+		WeekdayFrom: "Mon",
+		WeekdayTo:   "Wed",
 	}
 	tr4 := TimeRange{
-		TimeFrom:       "18:00",
-		TimeTo:         "20",
-		WeekdayFrom:    "Fri",
-		WeekdayTo:      "Sun",
+		TimeFrom:    "18:00",
+		TimeTo:      "20",
+		WeekdayFrom: "Fri",
+		WeekdayTo:   "Sun",
 	}
 	tr5 := TimeRange{
-		TimeFrom:       "19:00",
-		TimeTo:         "22",
-		WeekdayFrom:    "Sun",
-		WeekdayTo:      "Tue",
+		TimeFrom:    "19:00",
+		TimeTo:      "22",
+		WeekdayFrom: "Sun",
+		WeekdayTo:   "Tue",
 	}
 	const layout = "Jan 2, 2006 at 3:04pm (IST)"
 	tm, _ := time.Parse(layout, "Mar 27, 2021 at 12:45pm (IST)")
