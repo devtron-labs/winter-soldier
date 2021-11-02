@@ -8,7 +8,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
-	github.com/tidwall/gjson v1.9.1
+	github.com/tidwall/gjson v1.9.3
 	//golang.org/x/crypto v0.0.0-20200220183623-bac4c82f6975
 	k8s.io/apiextensions-apiserver v0.18.6
 	k8s.io/apimachinery v0.18.6
