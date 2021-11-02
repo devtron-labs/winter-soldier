@@ -45,7 +45,7 @@ func NewResourceSelectorImpl(Kubectl pkg.KubectlCmd, Mapper *pkg.Mapper, factory
 type ResourceSelectorImpl struct {
 	Kubectl pkg.KubectlCmd
 	Mapper  *pkg.Mapper
-	factory  func(mapper *pkg.Mapper) pkg.ArgsProcessor
+	factory func(mapper *pkg.Mapper) pkg.ArgsProcessor
 }
 
 func (r *ResourceSelectorImpl) handleLabelSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
@@ -164,7 +164,6 @@ func (r *ResourceSelectorImpl) handleSelector(rule pincherv1alpha1.Selector) ([]
 		}
 		return manifests, nil
 	}
-	return nil, nil
 }
 
 func (r *ResourceSelectorImpl) getNamespaces(rule pincherv1alpha1.Selector, factory pkg.ArgsProcessor) ([]string, error) {

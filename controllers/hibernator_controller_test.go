@@ -105,15 +105,15 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 		hibernator v1alpha1.Hibernator
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    *pincherv1alpha1.Hibernator
+		name   string
+		fields fields
+		args   args
+		want   *pincherv1alpha1.Hibernator
 	}{
 		{
 			name: "hibernate sleep test",
 			fields: fields{
-				kubectl: pkg.NewKubectl(),
+				kubectl:     pkg.NewKubectl(),
 				historyUtil: &HistoryImpl{},
 			},
 			args: args{hibernator: hibernator},
@@ -121,7 +121,7 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 		{
 			name: "hibernate delete test",
 			fields: fields{
-				kubectl: pkg.NewKubectl(),
+				kubectl:     pkg.NewKubectl(),
 				historyUtil: &HistoryImpl{},
 			},
 			args: args{hibernator: hibernator2},

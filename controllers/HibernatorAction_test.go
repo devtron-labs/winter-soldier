@@ -30,14 +30,14 @@ func TestHibernatorActionImpl_unHibernate(t *testing.T) {
 	kubectl := pkg.NewKubectlMock(pkg.DeploymentObjectsMock)
 
 	type Response struct {
-		impactedObjects  []pincherv1alpha1.ImpactedObject
+		impactedObjects []pincherv1alpha1.ImpactedObject
 		excludedObjects []pincherv1alpha1.ExcludedObject
 	}
 
 	type fields struct {
-		Kubectl        pkg.KubectlCmd
-		historyUtil    History
-		resourceAction ResourceAction
+		Kubectl          pkg.KubectlCmd
+		historyUtil      History
+		resourceAction   ResourceAction
 		resourceSelector ResourceSelector
 	}
 	type args struct {
@@ -57,7 +57,7 @@ func TestHibernatorActionImpl_unHibernate(t *testing.T) {
 				Kubectl:     kubectl,
 				historyUtil: &HistoryImpl{},
 				resourceAction: &ResourceActionImpl{
-					Kubectl: kubectl,
+					Kubectl:     kubectl,
 					historyUtil: &HistoryImpl{},
 				},
 				resourceSelector: &ResourceSelectorImpl{
@@ -115,9 +115,9 @@ func TestHibernatorActionImpl_unHibernate(t *testing.T) {
 			}
 			for _, object := range got.Status.History[0].ImpactedObjects {
 				parts := strings.Split(object.ResourceKey, "/")
-				name := parts[len(parts) - 1]
+				name := parts[len(parts)-1]
 				namespace := parts[1]
-				kind := parts[len(parts) - 2]
+				kind := parts[len(parts)-2]
 				r := &pkg.GetRequest{
 					Name:             name,
 					Namespace:        namespace,
@@ -148,14 +148,14 @@ func TestHibernatorActionImpl_hibernate(t *testing.T) {
 	kubectl := pkg.NewKubectlMock(pkg.DeploymentObjectsMock)
 
 	type Response struct {
-		impactedObjects  []pincherv1alpha1.ImpactedObject
+		impactedObjects []pincherv1alpha1.ImpactedObject
 		excludedObjects []pincherv1alpha1.ExcludedObject
 	}
 
 	type fields struct {
-		Kubectl        pkg.KubectlCmd
-		historyUtil    History
-		resourceAction ResourceAction
+		Kubectl          pkg.KubectlCmd
+		historyUtil      History
+		resourceAction   ResourceAction
 		resourceSelector ResourceSelector
 	}
 	type args struct {
@@ -232,9 +232,9 @@ func TestHibernatorActionImpl_hibernate(t *testing.T) {
 			}
 			for _, object := range got.Status.History[0].ImpactedObjects {
 				parts := strings.Split(object.ResourceKey, "/")
-				name := parts[len(parts) - 1]
+				name := parts[len(parts)-1]
 				namespace := parts[1]
-				kind := parts[len(parts) - 2]
+				kind := parts[len(parts)-2]
 				r := &pkg.GetRequest{
 					Name:             name,
 					Namespace:        namespace,
@@ -268,14 +268,14 @@ func TestHibernatorActionImpl_delete(t *testing.T) {
 	kubectl := pkg.NewKubectlMock(pkg.DeploymentObjectsMock)
 
 	type Response struct {
-		impactedObjects  []pincherv1alpha1.ImpactedObject
+		impactedObjects []pincherv1alpha1.ImpactedObject
 		excludedObjects []pincherv1alpha1.ExcludedObject
 	}
 
 	type fields struct {
-		Kubectl        pkg.KubectlCmd
-		historyUtil    History
-		resourceAction ResourceAction
+		Kubectl          pkg.KubectlCmd
+		historyUtil      History
+		resourceAction   ResourceAction
 		resourceSelector ResourceSelector
 	}
 	type args struct {
@@ -352,9 +352,9 @@ func TestHibernatorActionImpl_delete(t *testing.T) {
 			}
 			for _, object := range got.Status.History[0].ImpactedObjects {
 				parts := strings.Split(object.ResourceKey, "/")
-				name := parts[len(parts) - 1]
+				name := parts[len(parts)-1]
 				namespace := parts[1]
-				kind := parts[len(parts) - 2]
+				kind := parts[len(parts)-2]
 				r := &pkg.GetRequest{
 					Name:             name,
 					Namespace:        namespace,

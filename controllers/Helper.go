@@ -32,7 +32,7 @@ func componentsOfResourceKey(resourceKey string) (namespace, group, version, kin
 	if len(components) < 6 {
 		return "", "", "", "", ""
 	}
-	return  components[1], components[2], components[3], components[4], components[5]
+	return components[1], components[2], components[3], components[4], components[5]
 }
 
 func getKey(hibernator *v1alpha1.Hibernator) string {
@@ -42,4 +42,3 @@ func getKey(hibernator *v1alpha1.Hibernator) string {
 func getNamespacedName(hibernator *v1alpha1.Hibernator) string {
 	return fmt.Sprintf("/%s/%s", hibernator.Namespace, hibernator.Name)
 }
-

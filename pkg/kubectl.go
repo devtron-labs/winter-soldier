@@ -155,4 +155,3 @@ func ServerResourceForGroupVersionKind(disco discovery.DiscoveryInterface, gvk s
 	}
 	return nil, errors.NewNotFound(schema.GroupResource{Group: gvk.Group, Resource: gvk.Kind}, "")
 }
-

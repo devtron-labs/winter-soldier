@@ -41,9 +41,9 @@ func NewHibernatorActionImpl(kubectl pkg.KubectlCmd, historyUtil History, resour
 }
 
 type HibernatorActionImpl struct {
-	Kubectl        pkg.KubectlCmd
-	historyUtil    History
-	resourceAction ResourceAction
+	Kubectl          pkg.KubectlCmd
+	historyUtil      History
+	resourceAction   ResourceAction
 	resourceSelector ResourceSelector
 }
 

@@ -6,7 +6,7 @@ import (
 )
 
 var HibernateTest = v1alpha1.Hibernator{
-	TypeMeta:   metav1.TypeMeta{
+	TypeMeta: metav1.TypeMeta{
 		Kind:       "hibernator",
 		APIVersion: "pincher.devtron.ai/",
 	},
@@ -45,7 +45,7 @@ var HibernateTest = v1alpha1.Hibernator{
 }
 
 var UnHibernateTest = v1alpha1.Hibernator{
-	TypeMeta:   metav1.TypeMeta{
+	TypeMeta: metav1.TypeMeta{
 		Kind:       "hibernator",
 		APIVersion: "pincher.devtron.ai/",
 	},
@@ -84,13 +84,13 @@ var UnHibernateTest = v1alpha1.Hibernator{
 }
 
 var DeleteTest = v1alpha1.Hibernator{
-	TypeMeta:   metav1.TypeMeta{
+	TypeMeta: metav1.TypeMeta{
 		Kind:       "hibernator",
 		APIVersion: "pincher.devtron.ai/",
 	},
 	ObjectMeta: metav1.ObjectMeta{},
 	Spec: v1alpha1.HibernatorSpec{
-		When: v1alpha1.TimeRangesWithZone{},
+		When:   v1alpha1.TimeRangesWithZone{},
 		Action: v1alpha1.Delete,
 		Selectors: []v1alpha1.Rule{{
 			Inclusions: []v1alpha1.Selector{{

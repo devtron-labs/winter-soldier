@@ -25,11 +25,11 @@ func Test_kubectlMock_DeleteResource(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "base delete case",
+			name:   "base delete case",
 			fields: fields{db: make(map[string]unstructured.Unstructured, 0)},
 			args: args{
 				ctx: context.Background(),
-				r:   &DeleteRequest{
+				r: &DeleteRequest{
 					Name:             "nginx-deployment",
 					Namespace:        "pras",
 					GroupVersionKind: schema.GroupVersionKind{Kind: "Deployment"},
@@ -130,10 +130,10 @@ func Test_kubectlMock_ListResources(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "base listing case",
+			name:   "base listing case",
 			fields: fields{db: make(map[string]unstructured.Unstructured, 0)},
 			args: args{
-				r:   &ListRequest{
+				r: &ListRequest{
 					Namespace:            "pras",
 					GroupVersionResource: schema.GroupVersionResource{Resource: "deployment"},
 					ListOptions:          metav1.ListOptions{LabelSelector: "action=delete"},
@@ -142,14 +142,14 @@ func Test_kubectlMock_ListResources(t *testing.T) {
 			wantErr: false,
 			want: map[string]bool{
 				fmt.Sprintf("/%s/%s/%s", "pras", "Deployment", "nginx-deployment"): true,
-				fmt.Sprintf("/%s/%s/%s", "pras", "Deployment", "rss-site"): true,
+				fmt.Sprintf("/%s/%s/%s", "pras", "Deployment", "rss-site"):         true,
 			},
 		},
 		{
-			name: "base double selector listing case",
+			name:   "base double selector listing case",
 			fields: fields{db: make(map[string]unstructured.Unstructured, 0)},
 			args: args{
-				r:   &ListRequest{
+				r: &ListRequest{
 					Namespace:            "pras",
 					GroupVersionResource: schema.GroupVersionResource{Resource: "deployment"},
 					ListOptions:          metav1.ListOptions{LabelSelector: "action=delete,type=nginx"},
@@ -158,7 +158,7 @@ func Test_kubectlMock_ListResources(t *testing.T) {
 			wantErr: false,
 			want: map[string]bool{
 				fmt.Sprintf("/%s/%s/%s", "pras", "Deployment", "nginx-deployment"): true,
-				fmt.Sprintf("/%s/%s/%s", "pras", "Deployment", "rss-site"): true,
+				fmt.Sprintf("/%s/%s/%s", "pras", "Deployment", "rss-site"):         true,
 			},
 		},
 	}
@@ -203,11 +203,11 @@ func Test_kubectlMock_PatchResource(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "base case of patch",
+			name:   "base case of patch",
 			fields: fields{db: make(map[string]unstructured.Unstructured, 0)},
 			args: args{
 				ctx: context.Background(),
-				r:   &PatchRequest{
+				r: &PatchRequest{
 					Name:             "nginx-deployment",
 					Namespace:        "pras",
 					GroupVersionKind: schema.GroupVersionKind{Kind: "Deployment"},

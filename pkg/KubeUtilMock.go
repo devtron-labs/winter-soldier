@@ -21,7 +21,7 @@ func (m *MockResourceProcessor) MappingFor(resourceOrKindArg string) (*meta.REST
 	lResourceOrKindArgs := strings.ToLower(resourceOrKindArg)
 	tResourceOrKindArgs := strings.Title(lResourceOrKindArgs)
 	return &meta.RESTMapping{
-		Resource: schema.GroupVersionResource{Resource: lResourceOrKindArgs},
+		Resource:         schema.GroupVersionResource{Resource: lResourceOrKindArgs},
 		GroupVersionKind: schema.GroupVersionKind{Kind: tResourceOrKindArgs},
 	}, nil
 }

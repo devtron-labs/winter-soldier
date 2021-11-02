@@ -94,7 +94,7 @@ func ExpressionEvaluator(expression, json string) bool {
 	variablesWithValue["MemoryToNumber"] = MemoryToNumber
 	variablesWithValue["ParseTime"] = ParseTime
 	variablesWithValue["Now"] = func() *time.Time {
-		n :=time.Now()
+		n := time.Now()
 		return &n
 	}
 	variablesWithValue["AfterTime"] = func(t1, t2 *time.Time) (bool, error) {
@@ -127,8 +127,8 @@ func ParseTime(dateTime, format string) (*time.Time, error) {
 	t, err := time.Parse(format, dateTime)
 
 	if err != nil {
-		return nil, err
 		fmt.Println(err)
+		return nil, err
 	}
 	fmt.Println(t)
 	return &t, nil
@@ -168,9 +168,9 @@ func AddTime(t *time.Time, period string) (*time.Time, error) {
 func toSeconds(symbol rune) (int, error) {
 	switch symbol {
 	case 'd':
-		return 24*60*60, nil
+		return 24 * 60 * 60, nil
 	case 'h':
-		return 60*60, nil
+		return 60 * 60, nil
 	case 'm':
 		return 60, nil
 	case 's':

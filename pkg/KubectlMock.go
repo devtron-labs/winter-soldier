@@ -26,7 +26,7 @@ import (
 )
 
 type kubectlMock struct {
-	db   map[string]unstructured.Unstructured
+	db map[string]unstructured.Unstructured
 }
 
 func NewKubectlMock(bulk string) KubectlCmd {
@@ -108,7 +108,6 @@ func (k *kubectlMock) DeleteResource(ctx context.Context, r *DeleteRequest) (*Ma
 
 func (k *kubectlMock) PatchResource(ctx context.Context, r *PatchRequest) (*ManifestResponse, error) {
 	key := fmt.Sprintf("/%s/%s/%s", r.Namespace, r.GroupVersionKind.Kind, r.Name)
-
 
 	var k8sObj unstructured.Unstructured
 	ok := false

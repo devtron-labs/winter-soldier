@@ -34,6 +34,10 @@ spec:
         spec:
           description: HibernatorSpec defines the desired state of Hibernator
           properties:
+            action:
+              type: string
+            deleteStore:
+              type: boolean
             hibernate:
               type: boolean
             pause:
@@ -52,13 +56,9 @@ spec:
               type: integer
             revisionHistoryLimit:
               type: integer
-            rules:
+            selectors:
               items:
                 properties:
-                  action:
-                    type: string
-                  deleteStore:
-                    type: boolean
                   exclusions:
                     items:
                       properties:
@@ -134,7 +134,6 @@ spec:
                       type: object
                     type: array
                 required:
-                - action
                 - inclusions
                 type: object
               type: array
@@ -145,7 +144,9 @@ spec:
                 timeRanges:
                   items:
                     properties:
-                      cronExpression:
+                      cronExpressionFrom:
+                        type: string
+                      cronExpressionTo:
                         type: string
                       timeFrom:
                         type: string
@@ -172,18 +173,23 @@ spec:
             unHibernate:
               type: boolean
           required:
+          - action
           - revisionHistoryLimit
-          - rules
+          - selectors
           type: object
         status:
           description: HibernatorStatus defines the observed state of Hibernator
           properties:
+            action:
+              type: string
             history:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
                 this file'
               items:
                 properties:
+                  action:
+                    type: string
                   excludedObjects:
                     items:
                       properties:
@@ -199,8 +205,6 @@ spec:
                       - resourceKey
                       type: object
                     type: array
-                  hibernate:
-                    type: boolean
                   id:
                     format: int64
                     type: integer
@@ -214,7 +218,6 @@ spec:
                             Version              string `json:"version"` Kind                 string
                             `json:"kind"` Name                 string `json:"name"`
                             Namespace            string `json:"namespace"`
-                          format: int64
                           type: integer
                         relatedDeletedObject:
                           type: string
@@ -234,8 +237,8 @@ spec:
                     format: date-time
                     type: string
                 required:
+                - action
                 - excludedObjects
-                - hibernate
                 - id
                 - impactedObjects
                 - time
@@ -248,6 +251,7 @@ spec:
             status:
               type: string
           required:
+          - action
           - history
           - isHibernating
           - message

@@ -28,11 +28,10 @@ type History interface {
 }
 
 func NewHistoryImpl() History {
-	return &HistoryImpl{
-	}
+	return &HistoryImpl{}
 }
 
-type HistoryImpl struct {}
+type HistoryImpl struct{}
 
 func (r *HistoryImpl) getLatestHistory(revisionHistories []v1alpha1.RevisionHistory) *v1alpha1.RevisionHistory {
 	maxID := int64(-1)
@@ -86,4 +85,3 @@ func (r *HistoryImpl) addToHistory(history v1alpha1.RevisionHistory, revisionHis
 	finalHistories = append(finalHistories, history)
 	return finalHistories
 }
-
