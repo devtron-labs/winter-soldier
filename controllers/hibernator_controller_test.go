@@ -98,8 +98,8 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 		Status: pincherv1alpha1.HibernatorStatus{},
 	}
 	type fields struct {
-		kubectl pkg.KubectlCmd
-		historyUtil HistoryUtil
+		kubectl     pkg.KubectlCmd
+		historyUtil History
 	}
 	type args struct {
 		hibernator v1alpha1.Hibernator
@@ -114,7 +114,7 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 			name: "hibernate sleep test",
 			fields: fields{
 				kubectl: pkg.NewKubectl(),
-				historyUtil: &HistoryUtilImpl{},
+				historyUtil: &HistoryImpl{},
 			},
 			args: args{hibernator: hibernator},
 		},
@@ -122,7 +122,7 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 			name: "hibernate delete test",
 			fields: fields{
 				kubectl: pkg.NewKubectl(),
-				historyUtil: &HistoryUtilImpl{},
+				historyUtil: &HistoryImpl{},
 			},
 			args: args{hibernator: hibernator2},
 		},

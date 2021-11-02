@@ -36,7 +36,7 @@ type ResourceAction interface {
 	UnHibernateActionFactory(hibernator *pincherv1alpha1.Hibernator) Execute
 }
 
-func NewResourceActionImpl(kubectl pkg.KubectlCmd, historyUtil HistoryUtil) ResourceAction {
+func NewResourceActionImpl(kubectl pkg.KubectlCmd, historyUtil History) ResourceAction {
 	return &ResourceActionImpl{
 		Kubectl:     kubectl,
 		historyUtil: historyUtil,
@@ -45,7 +45,7 @@ func NewResourceActionImpl(kubectl pkg.KubectlCmd, historyUtil HistoryUtil) Reso
 
 type ResourceActionImpl struct {
 	Kubectl     pkg.KubectlCmd
-	historyUtil HistoryUtil
+	historyUtil History
 }
 
 func (r *ResourceActionImpl) DeleteAction(included []unstructured.Unstructured) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject) {
@@ -144,7 +144,7 @@ func (r *ResourceActionImpl) UnHibernateActionFactory(hibernator *pincherv1alpha
 			}
 
 			annotations := gjson.Get(string(to), "metadata.annotations")
-			originalCount := annotations.Map()["hibernator.devtron.ai/replicas"].Str
+			originalCount := annotations.Map()[replicaAnnotation].Str
 			replicaCount, err := strconv.Atoi(originalCount)
 			if len(originalCount) == 0 || err != nil {
 				resourceKey := getResourceKey(inc)

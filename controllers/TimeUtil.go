@@ -29,7 +29,7 @@ type TimeUtil interface {
 }
 
 type TimeUtilImpl struct {
-	historyUtil HistoryUtil
+	historyUtil History
 }
 
 func (r *TimeUtilImpl) getPauseUntilDuration(hibernator *v1alpha1.Hibernator, now time.Time) (time.Duration, error) {

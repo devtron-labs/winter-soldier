@@ -31,7 +31,7 @@ type HibernatorAction interface {
 	executeRules(hibernator *pincherv1alpha1.Hibernator, execute Execute, reSync bool) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject)
 }
 
-func NewHibernatorActionImpl(kubectl pkg.KubectlCmd, historyUtil HistoryUtil, resourceAction ResourceAction, resourceSelector ResourceSelector) HibernatorAction {
+func NewHibernatorActionImpl(kubectl pkg.KubectlCmd, historyUtil History, resourceAction ResourceAction, resourceSelector ResourceSelector) HibernatorAction {
 	return &HibernatorActionImpl{
 		Kubectl:          kubectl,
 		historyUtil:      historyUtil,
@@ -41,9 +41,9 @@ func NewHibernatorActionImpl(kubectl pkg.KubectlCmd, historyUtil HistoryUtil, re
 }
 
 type HibernatorActionImpl struct {
-	Kubectl          pkg.KubectlCmd
-	historyUtil      HistoryUtil
-	resourceAction   ResourceAction
+	Kubectl        pkg.KubectlCmd
+	historyUtil    History
+	resourceAction ResourceAction
 	resourceSelector ResourceSelector
 }
 

@@ -35,9 +35,9 @@ func TestHibernatorActionImpl_unHibernate(t *testing.T) {
 	}
 
 	type fields struct {
-		Kubectl          pkg.KubectlCmd
-		historyUtil      HistoryUtil
-		resourceAction   ResourceAction
+		Kubectl        pkg.KubectlCmd
+		historyUtil    History
+		resourceAction ResourceAction
 		resourceSelector ResourceSelector
 	}
 	type args struct {
@@ -55,10 +55,10 @@ func TestHibernatorActionImpl_unHibernate(t *testing.T) {
 			args: args{hibernator: &pkg.HibernateTest},
 			fields: fields{
 				Kubectl:     kubectl,
-				historyUtil: &HistoryUtilImpl{},
+				historyUtil: &HistoryImpl{},
 				resourceAction: &ResourceActionImpl{
 					Kubectl: kubectl,
-					historyUtil: &HistoryUtilImpl{},
+					historyUtil: &HistoryImpl{},
 				},
 				resourceSelector: &ResourceSelectorImpl{
 					Kubectl: kubectl,
@@ -153,9 +153,9 @@ func TestHibernatorActionImpl_hibernate(t *testing.T) {
 	}
 
 	type fields struct {
-		Kubectl          pkg.KubectlCmd
-		historyUtil      HistoryUtil
-		resourceAction   ResourceAction
+		Kubectl        pkg.KubectlCmd
+		historyUtil    History
+		resourceAction ResourceAction
 		resourceSelector ResourceSelector
 	}
 	type args struct {
@@ -173,7 +173,7 @@ func TestHibernatorActionImpl_hibernate(t *testing.T) {
 			args: args{hibernator: &pkg.HibernateTest},
 			fields: fields{
 				Kubectl:     kubectl,
-				historyUtil: &HistoryUtilImpl{},
+				historyUtil: &HistoryImpl{},
 				resourceAction: &ResourceActionImpl{
 					Kubectl: kubectl,
 				},
@@ -273,9 +273,9 @@ func TestHibernatorActionImpl_delete(t *testing.T) {
 	}
 
 	type fields struct {
-		Kubectl          pkg.KubectlCmd
-		historyUtil      HistoryUtil
-		resourceAction   ResourceAction
+		Kubectl        pkg.KubectlCmd
+		historyUtil    History
+		resourceAction ResourceAction
 		resourceSelector ResourceSelector
 	}
 	type args struct {
@@ -293,7 +293,7 @@ func TestHibernatorActionImpl_delete(t *testing.T) {
 			args: args{hibernator: &pkg.HibernateTest},
 			fields: fields{
 				Kubectl:     kubectl,
-				historyUtil: &HistoryUtilImpl{},
+				historyUtil: &HistoryImpl{},
 				resourceAction: &ResourceActionImpl{
 					Kubectl: kubectl,
 				},

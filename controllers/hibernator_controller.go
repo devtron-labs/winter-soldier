@@ -42,7 +42,7 @@ type HibernatorReconciler struct {
 	Scheme           *runtime.Scheme
 	Kubectl          pkg.KubectlCmd
 	Mapper           *pkg.Mapper
-	hibernatorAction HibernatorAction
+	HibernatorAction HibernatorAction
 	timeUtil         TimeUtil
 }
 
@@ -115,11 +115,11 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 	finalHibernator := &hibernator
 	updated := false
 	if hibernator.Spec.Action == pincherv1alpha1.Delete {
-		finalHibernator, updated = r.hibernatorAction.delete(&hibernator)
+		finalHibernator, updated = r.HibernatorAction.delete(&hibernator)
 	} else if !shouldHibernate {
-		finalHibernator, updated = r.hibernatorAction.unHibernate(&hibernator)
+		finalHibernator, updated = r.HibernatorAction.unHibernate(&hibernator)
 	} else if shouldHibernate {
-		finalHibernator, updated = r.hibernatorAction.hibernate(&hibernator)
+		finalHibernator, updated = r.HibernatorAction.hibernate(&hibernator)
 	} else {
 		log.Info("didnt hibernate or unHibernate - action: %s, timegap: %d, hibernating: %t", shouldHibernate, timeGap, hibernator.Status.IsHibernating)
 	}

@@ -21,15 +21,20 @@ import (
 	"math"
 )
 
-type HistoryUtil interface {
+type History interface {
 	getLatestHistory(revisionHistories []v1alpha1.RevisionHistory) *v1alpha1.RevisionHistory
 	getNewRevisionID(revisionHistories []v1alpha1.RevisionHistory) int64
 	addToHistory(history v1alpha1.RevisionHistory, revisionHistories []v1alpha1.RevisionHistory, reSync bool) []v1alpha1.RevisionHistory
 }
 
-type HistoryUtilImpl struct {}
+func NewHistoryImpl() History {
+	return &HistoryImpl{
+	}
+}
 
-func (r *HistoryUtilImpl) getLatestHistory(revisionHistories []v1alpha1.RevisionHistory) *v1alpha1.RevisionHistory {
+type HistoryImpl struct {}
+
+func (r *HistoryImpl) getLatestHistory(revisionHistories []v1alpha1.RevisionHistory) *v1alpha1.RevisionHistory {
 	maxID := int64(-1)
 	found := false
 	var latestHistory v1alpha1.RevisionHistory
@@ -46,7 +51,7 @@ func (r *HistoryUtilImpl) getLatestHistory(revisionHistories []v1alpha1.Revision
 	return &latestHistory
 }
 
-func (r *HistoryUtilImpl) getNewRevisionID(revisionHistories []v1alpha1.RevisionHistory) int64 {
+func (r *HistoryImpl) getNewRevisionID(revisionHistories []v1alpha1.RevisionHistory) int64 {
 	maxID := int64(-1)
 	for _, history := range revisionHistories {
 		if history.ID > maxID {
@@ -57,7 +62,7 @@ func (r *HistoryUtilImpl) getNewRevisionID(revisionHistories []v1alpha1.Revision
 }
 
 //TODO: if last entry in history is same as the new entry for example both has hibernate==true then merge them
-func (r *HistoryUtilImpl) addToHistory(history v1alpha1.RevisionHistory, revisionHistories []v1alpha1.RevisionHistory, reSync bool) []v1alpha1.RevisionHistory {
+func (r *HistoryImpl) addToHistory(history v1alpha1.RevisionHistory, revisionHistories []v1alpha1.RevisionHistory, reSync bool) []v1alpha1.RevisionHistory {
 	//if len(revisionHistories) < 10 {
 	//	revisionHistories = append(revisionHistories, history)
 	//	return revisionHistories
