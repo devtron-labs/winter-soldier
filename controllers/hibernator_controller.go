@@ -43,7 +43,7 @@ type HibernatorReconciler struct {
 	Kubectl          pkg.KubectlCmd
 	Mapper           *pkg.Mapper
 	HibernatorAction HibernatorAction
-	timeUtil         TimeUtil
+	TimeUtil         TimeUtil
 }
 
 // +kubebuilder:rbac:groups=pincher.devtron.ai,resources=hibernators,verbs=get;list;watch;create;update;patch;delete
@@ -70,7 +70,7 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 	log := r.Log.WithValues("hibernator", getNamespacedName(&hibernator))
 	now := time.Now()
 
-	diff, err := r.timeUtil.getPauseUntilDuration(&hibernator, now)
+	diff, err := r.TimeUtil.getPauseUntilDuration(&hibernator, now)
 	if err != nil {
 		log.Error(err, "continue processing as error parsing pause until %s", hibernator.Spec.PauseUntil.DateTime)
 	} else if diff.Seconds() > pincherv1alpha1.MinReSyncIntervalInSeconds {
@@ -97,9 +97,9 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 		}
 	}
 
-	requeueTime := r.timeUtil.getRequeueTimeDuration(timeGap, &hibernator)
+	requeueTime := r.TimeUtil.getRequeueTimeDuration(timeGap, &hibernator)
 
-	timeElapsedSinceLastRunInSeconds, hasPreviousRun := r.timeUtil.timeElapsedSinceLastRunInSeconds(&hibernator)
+	timeElapsedSinceLastRunInSeconds, hasPreviousRun := r.TimeUtil.timeElapsedSinceLastRunInSeconds(&hibernator)
 	if hasPreviousRun && timeElapsedSinceLastRunInSeconds <= pincherv1alpha1.MinReSyncIntervalInSeconds {
 		log.Info("skipping reconciliation as time elapsed since last run is less than 1 min")
 		return ctrl.Result{RequeueAfter: requeueTime}, nil
@@ -132,7 +132,7 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 		}
 	}
 
-	log.Info("end processing, processing parameter - start time: %v, timegap: %d, requeueTime:  %s", now, timeGap, requeueTime)
+	//log.Info("end processing, processing parameter - start time: %v, timegap: %d, requeueTime:  %s", now, timeGap, requeueTime)
 	return ctrl.Result{RequeueAfter: requeueTime}, nil
 }
 

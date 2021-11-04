@@ -57,8 +57,8 @@ func NewKubectl() KubectlCmd {
 		return nil
 	}
 	return &kubectl{
-		restConfig,
-		extensionsClientset,
+		restConfig:          restConfig,
+		extensionsClientset: extensionsClientset,
 	}
 }
 

@@ -67,19 +67,22 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
+	log := ctrl.Log.WithName("controllers").WithName("Hibernator")
 	kubectl := pkg.NewKubectl()
 	mapper := pkg.NewMapperFactory()
-	historyUtil := controllers.NewHistoryImpl()
-	resourceAction := controllers.NewResourceActionImpl(kubectl, historyUtil)
+	history := controllers.NewHistoryImpl()
+	resourceAction := controllers.NewResourceActionImpl(kubectl, history)
 	resourceSelector := controllers.NewResourceSelectorImpl(kubectl, mapper, pkg.NewFactory)
-	hibernatorAction := controllers.NewHibernatorActionImpl(kubectl, historyUtil, resourceAction, resourceSelector)
+	hibernatorAction := controllers.NewHibernatorActionImpl(kubectl, history, resourceAction, resourceSelector)
+	timeUtil := controllers.NewTimeUtilImpl(history)
 	if err = (&controllers.HibernatorReconciler{
 		Client:           mgr.GetClient(),
-		Log:              ctrl.Log.WithName("controllers").WithName("Hibernator"),
+		Log:              log,
 		Scheme:           mgr.GetScheme(),
 		Kubectl:          kubectl,
 		Mapper:           mapper,
 		HibernatorAction: hibernatorAction,
+		TimeUtil:         timeUtil,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Hibernator")
 		os.Exit(1)

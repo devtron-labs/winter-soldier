@@ -31,7 +31,7 @@ func NewHistoryImpl() History {
 	return &HistoryImpl{}
 }
 
-type HistoryImpl struct{}
+type HistoryImpl struct {}
 
 func (r *HistoryImpl) getLatestHistory(revisionHistories []v1alpha1.RevisionHistory) *v1alpha1.RevisionHistory {
 	maxID := int64(-1)

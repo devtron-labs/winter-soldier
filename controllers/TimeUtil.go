@@ -28,12 +28,17 @@ type TimeUtil interface {
 	getRequeueTimeDuration(timeGap int, hibernator *v1alpha1.Hibernator) time.Duration
 }
 
+func NewTimeUtilImpl(history History) TimeUtil {
+	return &TimeUtilImpl{history: history}
+}
+
 type TimeUtilImpl struct {
-	historyUtil History
+	history History
 }
 
 func (r *TimeUtilImpl) getPauseUntilDuration(hibernator *v1alpha1.Hibernator, now time.Time) (time.Duration, error) {
 	diff := time.Duration(0) * time.Minute
+
 	if len(strings.Trim(hibernator.Spec.PauseUntil.DateTime, " 	")) > 0 {
 		tm, err := time.Parse(layout, strings.Trim(hibernator.Spec.PauseUntil.DateTime, " 	"))
 		if err != nil {
@@ -46,7 +51,7 @@ func (r *TimeUtilImpl) getPauseUntilDuration(hibernator *v1alpha1.Hibernator, no
 }
 
 func (r *TimeUtilImpl) timeElapsedSinceLastRunInSeconds(hibernator *v1alpha1.Hibernator) (timeElapsedSinceLastRunInSeconds float64, hasPreviousRun bool) {
-	latestHistory := r.historyUtil.getLatestHistory(hibernator.Status.History)
+	latestHistory := r.history.getLatestHistory(hibernator.Status.History)
 	hasPreviousRun = false
 	timeElapsedSinceLastRunInSeconds = 0.0
 	if latestHistory != nil {

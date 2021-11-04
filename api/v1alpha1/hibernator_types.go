@@ -34,7 +34,7 @@ type HibernatorSpec struct {
 	ReSyncInterval       int                `json:"reSyncInterval,omitempty"`
 	Pause                bool               `json:"pause,omitempty"`
 	PauseUntil           DateTimeWithZone   `json:"pauseUntil,omitempty"`
-	RevisionHistoryLimit int                `json:"revisionHistoryLimit"`
+	RevisionHistoryLimit *int               `json:"revisionHistoryLimit,omitempty"`
 	Action               Action             `json:"action"`
 	DeleteStore          bool               `json:"deleteStore,omitempty"`
 }
