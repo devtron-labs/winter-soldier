@@ -3,5 +3,29 @@ kind: Hibernator
 metadata:
   name: hibernator-sample
 spec:
-  # Add fields here
-  foo: bar
+  timeRangesWithZone:
+    timeZone: "Asia/Kolkata"
+    timeRanges:
+      - timeFrom: 00:00
+        timeTo: 23:59:59
+        weekdayFrom: Sat
+        weekdayTo: Sun
+      - timeFrom: 00:00
+        timeTo: 08:00
+        weekdayFrom: Mon
+        weekdayTo: Fri
+      - timeFrom: 20:00
+        timeTo: 23:59:59
+        weekdayFrom: Mon
+        weekdayTo: Fri
+  selectors:
+    - inclusions:
+        - objectSelector:
+            name: ""
+            type: "ro,deployment"
+            fieldSelector:
+              - AfterTime(AddTime(ParseTime({{metadata.creationTimestamp}}, '2006-01-02T15:04:05Z'), '5m'), Now())
+          namespaceSelector:
+            name: "pras"
+      exclusions: [ ]
+  action: delete

@@ -18,6 +18,7 @@ package controllers
 
 import (
 	"github.com/devtron-labs/winter-soldier/api/v1alpha1"
+	"github.com/pkg/errors"
 	"strings"
 	"time"
 )
@@ -42,7 +43,7 @@ func (r *TimeUtilImpl) getPauseUntilDuration(hibernator *v1alpha1.Hibernator, no
 	if len(strings.Trim(hibernator.Spec.PauseUntil.DateTime, " 	")) > 0 {
 		tm, err := time.Parse(layout, strings.Trim(hibernator.Spec.PauseUntil.DateTime, " 	"))
 		if err != nil {
-			return diff, err
+			return diff, errors.Wrapf(err, "error parsing date time %s", hibernator.Spec.PauseUntil.DateTime)
 		} else {
 			diff = tm.Sub(now)
 		}
