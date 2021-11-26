@@ -110,7 +110,7 @@ kubectl apply -f https://raw.githubusercontent.com/devtron-labs/winter-soldier/m
 Execute the following command to apply the deployment manifest for installing winter soldier. 
 
 ```bash
-kubectl apply -f https://raw.githubusercontent.com/arushi09-hub/winter-soldier/readme-update/config/hibernator_install.yaml
+kubectl apply -f https://raw.githubusercontent.com/devtron-labs/winter-soldier/main/config/hibernator_install.yaml
 ```
 
 **STEP 3**
@@ -120,7 +120,7 @@ After installing winter soldier, customize or create our own hibernator.yaml tem
 Refer to -
 
 ```bash
-wget https://raw.githubusercontent.com/arushi09-hub/winter-soldier/readme-update/config/hibernator.yaml
+wget https://raw.githubusercontent.com/devtron-labs/winter-soldier/main/config/hibernator.yaml
 ```
 
 You can either use the above template and customize it or create your own.
