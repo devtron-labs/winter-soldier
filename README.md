@@ -91,11 +91,14 @@ spec:
 ```
 Above settings will take action on Sat and Sun from 00:00 to 23:59:59, and on Mon-Fri from 00:00 to 08:00 and 20:00 to 23:59:59. If `action:sleep` then runs hibernate at `timeFrom` and unhibernate at `timeTo`.  If `action: delete` then it will delete workloads at `timeFrom` and `timeTo`.
 
-### How to install 
+## How to install 
+
+### Using Kubectl 
 
 To install winter soldier, follow the steps given below - 
 
 **STEP 1**
+
 Execute the following command to apply the crd.
 
 ```bash
@@ -107,7 +110,7 @@ kubectl apply -f https://raw.githubusercontent.com/devtron-labs/winter-soldier/m
 Execute the following command to apply the deployment manifest for installing winter soldier. 
 
 ```bash
-kubectl apply -f 
+kubectl apply -f https://raw.githubusercontent.com/arushi09-hub/winter-soldier/readme-update/config/hibernator_install.yaml
 ```
 
 **STEP 3**
@@ -117,7 +120,7 @@ After installing winter soldier, customize or create our own hibernator.yaml tem
 Refer to -
 
 ```bash
-wget 
+wget https://raw.githubusercontent.com/arushi09-hub/winter-soldier/readme-update/config/hibernator.yaml
 ```
 
 You can either use the above template and customize it or create your own.
@@ -125,6 +128,8 @@ You can either use the above template and customize it or create your own.
 **STEP 4**
 
 Verify whether the hibernator is applied on the particular resources.
+
+### Using helm
 
 
 ### Other Configurations
