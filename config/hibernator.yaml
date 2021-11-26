@@ -1,0 +1,36 @@
+apiVersion: pincher.devtron.ai/v1alpha1
+kind: Hibernator
+metadata:
+  name: test
+spec:
+  timeRangesWithZone:
+    timeZone: "Asia/Kolkata"
+    timeRanges:
+    - timeFrom: 00:00
+      timeTo: 23:59:59
+      weekdayFrom: Sat
+      weekdayTo: Sun
+    - timeFrom: 00:00
+      timeTo: 08:00
+      weekdayFrom: Mon
+      weekdayTo: Fri
+    - timeFrom: 00:00
+      timeTo: 23:59:59
+      weekdayFrom: Mon
+      weekdayTo: Fri
+  selectors:
+  - inclusions:
+    - objectSelector:
+        name: ""
+        type: "ro,deploy"
+        fieldSelector:
+          - AfterTime(Now(), AddTime(ParseTime({{metadata.creationTimestamp}}, '2006-01-02T15:04:05Z'), '4d'))
+      namespaceSelector:
+        name: "all"
+    exclusions:
+    - objectSelector:
+        name: ""
+        type: "ro,deployment"
+      namespaceSelector:
+        name: "kube-system,argo,devtroncd"
+  action: delete

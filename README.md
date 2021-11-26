@@ -10,26 +10,28 @@ Winter Soldier is an operator which expects conditions to be defined using CRD h
 ## Motivation
 Overtime Kubernetes clusters end up with workloads which have outlived their utility and add to the TCO of infrastructure.  Some prominent use cases are
 
-1. Microservices in QA environment are not required during off-work hours or during weekends
-2. UAT environment is required only before releasing to production but is kept running because of time required to bring it up
-3. Workload created for POC purpose, eg - Kafka, Mongodb, SQL workload, are left running long after POC is done
+1. Microservices in QA environment are not required during off-work hours or during weekends.
+2. UAT environment is required only before releasing to production but is kept running because of time required to bring it up.
+3. Workload created for POC purpose, eg - Kafka, Mongodb, SQL workload, are left running long after POC is done.
 
-## Configuration
+## Configurations
+
 ### Actions
-Winter Soldier supports two type of actions on the workload
+Winter Soldier supports two type of actions on the workloads.
 #### Delete
-This action can be used to delete any Kubernetes object. eg
+This action can be used to delete any Kubernetes object.
  ```yaml
  spec:
   action: delete
 ```
 #### Sleep
-This condition can be used to change replicas of workload to 0. eg
+This condition can be used to change replicas of workload to 0.
 ```yaml
 spec:
   action: sleep
 ```
 At the end of hibernation cycle it sets replica count of workload to same number as it was before hibernation.
+
 ### Conditions
 Hibernator uses [gjson](https://github.com/tidwall/gjson) to select fields in Kubernetes objects and [expr](github.com/antonmedv/expr) for conditions. Please check them out for advanced cases.
 
@@ -88,6 +90,42 @@ spec:
         weekdayTo: Fri
 ```
 Above settings will take action on Sat and Sun from 00:00 to 23:59:59, and on Mon-Fri from 00:00 to 08:00 and 20:00 to 23:59:59. If `action:sleep` then runs hibernate at `timeFrom` and unhibernate at `timeTo`.  If `action: delete` then it will delete workloads at `timeFrom` and `timeTo`.
+
+### How to install 
+
+To install winter soldier, follow the steps given below - 
+
+**STEP 1**
+Execute the following command to apply the crd.
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/devtron-labs/winter-soldier/main/config/crd/bases/pincher.devtron.ai_hibernators.yaml 
+```
+
+**STEP 2**
+
+Execute the following command to apply the deployment manifest for installing winter soldier. 
+
+```bash
+kubectl apply -f 
+```
+
+**STEP 3**
+
+After installing winter soldier, customize or create our own hibernator.yaml template which will contain the included and excluded  resources on which hibernator will be applied. 
+
+Refer to -
+
+```bash
+wget 
+```
+
+You can either use the above template and customize it or create your own.
+
+**STEP 4**
+
+Verify whether the hibernator is applied on the particular resources.
+
 
 ### Other Configurations
 1. Pause - To pause execution
