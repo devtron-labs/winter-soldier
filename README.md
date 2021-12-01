@@ -115,16 +115,19 @@ kubectl apply -f https://raw.githubusercontent.com/devtron-labs/winter-soldier/m
 
 **STEP 3**
 
-After installing winter soldier, customize or create our own hibernator.yaml template which will contains the included and excluded resources on which winter soldier will be applied.
-
+After installing winter-soldier, create your own hibernator-policies, you can refer some example policies we have included in.
 Refer to -
 
 ```bash
-wget https://raw.githubusercontent.com/devtron-labs/winter-soldier/main/config/hibernator.yaml
+wget https://raw.githubusercontent.com/devtron-labs/winter-soldier/main/config/hibernators
 ```
+**STEP 4**
 
-You can either use the above template and customize it or create your own.
+Now, apply the yaml for hibernator_policies. 
 
+```bash
+kubectl apply -f hibernator.yaml
+```
 
 ### Using helm
 
