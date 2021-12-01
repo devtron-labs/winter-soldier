@@ -116,7 +116,7 @@ kubectl apply -f https://raw.githubusercontent.com/devtron-labs/winter-soldier/m
 **STEP 3**
 
 After installing winter-soldier, create your own hibernator-policies, you can refer some example policies we have included in.
-Refer to the folder - [Hibernators](/config/hibernators)
+Refer to the folder - [Hibernators](/main/config/hibernators)
 
 
 

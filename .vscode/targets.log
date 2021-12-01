@@ -8,9 +8,10 @@ make all --print-data-base --no-builtin-variables --no-builtin-rules --question
 # This program built for i386-apple-darwin11.3.0
  
 
-# Make data base, printed on Wed Dec  1 14:23:06 2021
+# Make data base, printed on Wed Dec  1 15:39:28 2021
 
 # Variables
+ 
 
 # automatic
 <D = $(patsubst %/,%,$(dir $<))
@@ -43,7 +44,7 @@ __CFBundleIdentifier = com.microsoft.VSCode
 # environment
 INFOPATH = /opt/homebrew/share/info:
 # environment
-VSCODE_IPC_HOOK_EXTHOST = /var/folders/f6/kkjzsn914n5f5p7x9zqd_gx40000gn/T/vscode-ipc-b4987a65-bd5d-4316-afbe-23a1cae8b7a1.sock
+VSCODE_IPC_HOOK_EXTHOST = /var/folders/f6/kkjzsn914n5f5p7x9zqd_gx40000gn/T/vscode-ipc-dbb6d801-dde9-402b-8e23-7201735312eb.sock
 # environment
 VSCODE_CWD = /
 # environment
@@ -223,6 +224,7 @@ manager: generate fmt vet
 #  Needs to be updated (-q is set).
 # variable set hash-table stats:
 # Load=0/32=0%, Rehash=0, Collisions=0/2=0%
+ 
 #  commands to execute (from `Makefile', line 22):
 	go build -o bin/winter-soldier main.go
 	
@@ -283,7 +285,6 @@ manifests: controller-gen
 #  Modification time never checked.
 #  File has not been updated.
 #  commands to execute (from `Makefile', line 43):
- 
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	
 
@@ -382,6 +383,6 @@ install: manifests kustomize
 # strcache size: total = 4096 / max = 4096 / min = 4096 / avg = 4096
 # strcache free: total = 4087 / max = 4087 / min = 4087 / avg = 4087
 
-# Finished Make data base on Wed Dec  1 14:23:06 2021
+# Finished Make data base on Wed Dec  1 15:39:28 2021
 
  
