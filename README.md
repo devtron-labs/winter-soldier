@@ -118,8 +118,6 @@ kubectl apply -f https://raw.githubusercontent.com/devtron-labs/winter-soldier/m
 After installing winter-soldier, create your own hibernator-policies, you can refer some example policies we have included in.
 Refer to the folder - [Hibernators](/main/config/hibernators)
 
-
-
 **STEP 4**
 
 Now, apply the yaml for hibernator_policies. 
@@ -128,8 +126,13 @@ Now, apply the yaml for hibernator_policies.
 kubectl apply -f hibernator.yaml
 ```
 
-### Using helm
+### Using helm 
 
+Execute the following command below to install winter-soldier using helm.
+
+```bash
+helm install winter-soldier . 
+```
 
 ### Other Configurations
 1. Pause - To pause execution
