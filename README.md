@@ -107,7 +107,7 @@ kubectl apply -f https://raw.githubusercontent.com/devtron-labs/winter-soldier/m
 
 **STEP 2**
 
-Execute the following command to apply the  winter-soldier controller for installing winter soldier. 
+Execute the following command to install winter-soldier. 
 
 ```bash
 kubectl apply -f https://raw.githubusercontent.com/devtron-labs/winter-soldier/main/config/hibernator_install.yaml
@@ -125,9 +125,6 @@ wget https://raw.githubusercontent.com/devtron-labs/winter-soldier/main/config/h
 
 You can either use the above template and customize it or create your own.
 
-**STEP 4**
-
-Verify whether the hibernator is applied on the particular resources.
 
 ### Using helm
 
