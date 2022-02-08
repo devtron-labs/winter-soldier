@@ -37,6 +37,7 @@ type HibernatorSpec struct {
 	RevisionHistoryLimit *int               `json:"revisionHistoryLimit,omitempty"`
 	Action               Action             `json:"action"`
 	DeleteStore          bool               `json:"deleteStore,omitempty"`
+	TargetReplicas       *[]int             `json:"targetReplicas,omitempty"`
 }
 
 type Rule struct {
@@ -151,6 +152,7 @@ const (
 	Delete      Action = "delete"
 	Hibernate   Action = "hibernate"
 	UnHibernate Action = "unhibernate"
+	Scale       Action = "scale"
 )
 
 type Weekday string

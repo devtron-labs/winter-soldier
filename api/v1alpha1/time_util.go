@@ -132,7 +132,8 @@ func (t TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) (int, boo
 	inRange := false
 	normalizedTimeRanges := t.normalizeTimeRange()
 	var matchedTimeRange *TimeRange
-	for _, tr := range normalizedTimeRanges {
+	matchedIndex := -1
+	for index, tr := range normalizedTimeRanges {
 		timeGap, contains, err := tr.NearestTimeGapInSeconds(timeWithZone)
 		if err != nil {
 			return -1, false, err
@@ -142,11 +143,13 @@ func (t TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) (int, boo
 			inRange = contains
 			t := cloneTimeRange(tr)
 			matchedTimeRange = &t
+			matchedIndex = index
 		} else if contains && !inRange {
 			nearestTimeGap = timeGap
 			inRange = contains
 			t := cloneTimeRange(tr)
 			matchedTimeRange = &t
+			matchedIndex = index
 		} else if !inRange && nearestTimeGap > timeGap {
 			nearestTimeGap = timeGap
 			inRange = contains
@@ -154,6 +157,7 @@ func (t TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) (int, boo
 			matchedTimeRange = &t
 		}
 	}
+	fmt.Printf("matched index %d\n", matchedIndex)
 	fmt.Printf("matched timeRange %v\n", matchedTimeRange)
 	return nearestTimeGap, inRange, nil
 }
