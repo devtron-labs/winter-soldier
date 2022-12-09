@@ -1,0 +1,270 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: hibernators.pincher.devtron.ai
+spec:
+  group: pincher.devtron.ai
+  names:
+    kind: Hibernator
+    listKind: HibernatorList
+    plural: hibernators
+    singular: hibernator
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: Hibernator is the Schema for the hibernators API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: HibernatorSpec defines the desired state of Hibernator
+          properties:
+            action:
+              type: string
+            deleteStore:
+              type: boolean
+            hibernate:
+              type: boolean
+            pause:
+              type: boolean
+            pauseUntil:
+              properties:
+                dateTime:
+                  type: string
+                timeZone:
+                  type: string
+              required:
+              - dateTime
+              - timeZone
+              type: object
+            reSyncInterval:
+              type: integer
+            revisionHistoryLimit:
+              type: integer
+            selectors:
+              items:
+                properties:
+                  exclusions:
+                    items:
+                      properties:
+                        namespaceSelector:
+                          properties:
+                            fieldSelector:
+                              items:
+                                type: string
+                              type: array
+                            labels:
+                              items:
+                                type: string
+                              type: array
+                            name:
+                              type: string
+                          type: object
+                        objectSelector:
+                          properties:
+                            fieldSelector:
+                              items:
+                                type: string
+                              type: array
+                            labels:
+                              items:
+                                type: string
+                              type: array
+                            name:
+                              type: string
+                            type:
+                              type: string
+                          required:
+                          - type
+                          type: object
+                      required:
+                      - objectSelector
+                      type: object
+                    type: array
+                  inclusions:
+                    items:
+                      properties:
+                        namespaceSelector:
+                          properties:
+                            fieldSelector:
+                              items:
+                                type: string
+                              type: array
+                            labels:
+                              items:
+                                type: string
+                              type: array
+                            name:
+                              type: string
+                          type: object
+                        objectSelector:
+                          properties:
+                            fieldSelector:
+                              items:
+                                type: string
+                              type: array
+                            labels:
+                              items:
+                                type: string
+                              type: array
+                            name:
+                              type: string
+                            type:
+                              type: string
+                          required:
+                          - type
+                          type: object
+                      required:
+                      - objectSelector
+                      type: object
+                    type: array
+                required:
+                - inclusions
+                type: object
+              type: array
+            timeRangesWithZone:
+              description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+                Important: Run "make" to regenerate code after modifying this file'
+              properties:
+                timeRanges:
+                  items:
+                    properties:
+                      cronExpressionFrom:
+                        type: string
+                      cronExpressionTo:
+                        type: string
+                      timeFrom:
+                        type: string
+                      timeTo:
+                        type: string
+                      timeZone:
+                        type: string
+                      weekdayFrom:
+                        type: string
+                      weekdayTo:
+                        type: string
+                    required:
+                    - timeFrom
+                    - timeTo
+                    - weekdayFrom
+                    - weekdayTo
+                    type: object
+                  type: array
+                timeZone:
+                  type: string
+              required:
+              - timeRanges
+              type: object
+            unHibernate:
+              type: boolean
+          required:
+          - action
+          - selectors
+          type: object
+        status:
+          description: HibernatorStatus defines the observed state of Hibernator
+          properties:
+            action:
+              type: string
+            history:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              items:
+                properties:
+                  action:
+                    type: string
+                  excludedObjects:
+                    items:
+                      properties:
+                        reason:
+                          description: Group       string `json:"group"` Version     string
+                            `json:"version"` Kind        string `json:"kind"` Name        string
+                            `json:"name"` Namespace   string `json:"namespace"`
+                          type: string
+                        resourceKey:
+                          type: string
+                      required:
+                      - reason
+                      - resourceKey
+                      type: object
+                    type: array
+                  id:
+                    format: int64
+                    type: integer
+                  impactedObjects:
+                    items:
+                      properties:
+                        message:
+                          type: string
+                        originalCount:
+                          description: Group                string `json:"group"`
+                            Version              string `json:"version"` Kind                 string
+                            `json:"kind"` Name                 string `json:"name"`
+                            Namespace            string `json:"namespace"`
+                          type: integer
+                        relatedDeletedObject:
+                          type: string
+                        resourceKey:
+                          type: string
+                        status:
+                          type: string
+                      required:
+                      - message
+                      - originalCount
+                      - relatedDeletedObject
+                      - resourceKey
+                      - status
+                      type: object
+                    type: array
+                  time:
+                    format: date-time
+                    type: string
+                required:
+                - action
+                - excludedObjects
+                - id
+                - impactedObjects
+                - time
+                type: object
+              type: array
+            isHibernating:
+              type: boolean
+            message:
+              type: string
+            status:
+              type: string
+          required:
+          - action
+          - history
+          - isHibernating
+          - message
+          - status
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
