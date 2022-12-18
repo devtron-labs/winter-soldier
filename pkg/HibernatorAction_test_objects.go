@@ -40,6 +40,7 @@ var HibernateTest = v1alpha1.Hibernator{
 		UnHibernate: false,
 		Pause:       false,
 		PauseUntil:  v1alpha1.DateTimeWithZone{},
+		Action:      v1alpha1.Hibernate,
 	},
 	Status: v1alpha1.HibernatorStatus{},
 }
@@ -79,6 +80,7 @@ var UnHibernateTest = v1alpha1.Hibernator{
 		UnHibernate: false,
 		Pause:       false,
 		PauseUntil:  v1alpha1.DateTimeWithZone{},
+		Action:      v1alpha1.Hibernate,
 	},
 	Status: v1alpha1.HibernatorStatus{},
 }

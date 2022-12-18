@@ -97,12 +97,16 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 		},
 		Status: pincherv1alpha1.HibernatorStatus{},
 	}
+
 	type fields struct {
-		kubectl     pkg.KubectlCmd
-		historyUtil History
+		kubectl          pkg.KubectlCmd
+		historyUtil      History
+		resourceAction   ResourceAction
+		resourceSelector ResourceSelector
 	}
 	type args struct {
 		hibernator v1alpha1.Hibernator
+		timeGap    pincherv1alpha1.NearestTimeGap
 	}
 	tests := []struct {
 		name   string
@@ -116,7 +120,10 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 				kubectl:     pkg.NewKubectl(),
 				historyUtil: &HistoryImpl{},
 			},
-			args: args{hibernator: hibernator},
+			args: args{
+				hibernator: hibernator,
+				timeGap:    pincherv1alpha1.NearestTimeGap{WithinRange: true},
+			},
 		},
 		{
 			name: "hibernate delete test",
@@ -129,10 +136,8 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &HibernatorActionImpl{
-				Kubectl: tt.fields.kubectl,
-			}
-			got, _ := r.hibernate(&tt.args.hibernator)
+			r := NewHibernatorActionImpl(tt.fields.kubectl, tt.fields.historyUtil, tt.fields.resourceAction, tt.fields.resourceSelector)
+			got, _ := r.hibernate(&tt.args.hibernator, tt.args.timeGap)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("hibernate() got = %v, want %v", got, tt.want)
 			}
