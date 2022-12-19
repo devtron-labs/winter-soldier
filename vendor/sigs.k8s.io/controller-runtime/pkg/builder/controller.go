@@ -309,17 +309,19 @@ func (blder *Builder) doController(r reconcile.Reconciler) error {
 
 	// Setup the logger.
 	if ctrlOptions.LogConstructor == nil {
-		log := blder.mgr.GetLogger().WithValues(
+		log = blder.mgr.GetLogger().WithValues(
 			"controller", controllerName,
 			"controllerGroup", gvk.Group,
 			"controllerKind", gvk.Kind,
 		)
 
+		lowerCamelCaseKind := strings.ToLower(gvk.Kind[:1]) + gvk.Kind[1:]
+
 		ctrlOptions.LogConstructor = func(req *reconcile.Request) logr.Logger {
 			log := log
 			if req != nil {
 				log = log.WithValues(
-					gvk.Kind, klog.KRef(req.Namespace, req.Name),
+					lowerCamelCaseKind, klog.KRef(req.Namespace, req.Name),
 					"namespace", req.Namespace, "name", req.Name,
 				)
 			}

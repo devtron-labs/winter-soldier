@@ -33,7 +33,6 @@ type NearestTimeGap struct {
 	TimeGapInSeconds int
 	WithinRange      bool
 	MatchedIndex     int
-	Err              error
 }
 
 func (t *TimeRangesWithZone) Contains(instant time.Time) (bool, error) {
@@ -125,7 +124,7 @@ func (w Weekday) toOrdinal() int {
 	}
 }
 
-func (t *TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) NearestTimeGap {
+func (t *TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) (NearestTimeGap, error) {
 	zone := "UTC"
 	if len(t.TimeZone) != 0 {
 		zone = t.TimeZone
@@ -136,8 +135,7 @@ func (t *TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) NearestT
 			TimeGapInSeconds: -1,
 			WithinRange:      false,
 			MatchedIndex:     -1,
-			Err:              err,
-		}
+		}, err
 	}
 	timeWithZone := instant.In(loc)
 	nearestTimeGap := 2147483647
@@ -152,8 +150,7 @@ func (t *TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) NearestT
 				TimeGapInSeconds: -1,
 				WithinRange:      false,
 				MatchedIndex:     -1,
-				Err:              err,
-			}
+			}, err
 		}
 		//if was not in range earlier and now in range OR was earlier also in range but this is shorter time range OR out of range but this is shorter time range
 		if contains && (nearestTimeGap > timeGap || !nearestTimeGapInRange) {
@@ -198,8 +195,7 @@ func (t *TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) NearestT
 		TimeGapInSeconds: nearestTimeGap,
 		WithinRange:      nearestTimeGapInRange,
 		MatchedIndex:     matchedIndex,
-		Err:              nil,
-	}
+	}, nil
 }
 
 func (t *TimeRangesWithZone) normalizeTimeRange() []TimeRange {

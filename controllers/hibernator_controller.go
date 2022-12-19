@@ -85,10 +85,10 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 
 	//TODO: calculation may be different for delete
 	timeRangeWithZone := hibernator.Spec.When
-	nearestTimeGap := timeRangeWithZone.NearestTimeGapInSeconds(now)
+	nearestTimeGap, err := timeRangeWithZone.NearestTimeGapInSeconds(now)
 	//even if timeGap is error if reSyncInterval is set, it should still be able to work in case of delete
-	if nearestTimeGap.Err != nil {
-		log.Error(nearestTimeGap.Err, "unable to parse the time interval")
+	if err != nil {
+		log.Error(err, "unable to parse the time interval")
 		if hibernator.Spec.ReSyncInterval <= 0 {
 			log.Error(err, "unable to parse the time interval and reSyncInterval is <= 0 hence aborting")
 			//TODO: generate event

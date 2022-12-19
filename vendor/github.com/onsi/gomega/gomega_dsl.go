@@ -22,7 +22,7 @@ import (
 	"github.com/onsi/gomega/types"
 )
 
-const GOMEGA_VERSION = "1.19.0"
+const GOMEGA_VERSION = "1.18.1"
 
 const nilGomegaPanic = `You are trying to make an assertion, but haven't registered Gomega's fail handler.
 If you're using Ginkgo then you probably forgot to put your assertion in an It().
@@ -52,7 +52,7 @@ var Default = Gomega(internal.NewGomega(internal.FetchDefaultDurationBundle()))
 // rich ecosystem of matchers without causing a test to fail.  For example, to aggregate a series of potential failures
 // or for use in a non-test setting.
 func NewGomega(fail types.GomegaFailHandler) Gomega {
-	return internal.NewGomega(internalGomega(Default).DurationBundle).ConfigureWithFailHandler(fail)
+	return internal.NewGomega(Default.(*internal.Gomega).DurationBundle).ConfigureWithFailHandler(fail)
 }
 
 // WithT wraps a *testing.T and provides `Expect`, `Eventually`, and `Consistently` methods.  This allows you to leverage
@@ -69,20 +69,6 @@ type WithT = internal.Gomega
 // GomegaWithT is deprecated in favor of gomega.WithT, which does not stutter.
 type GomegaWithT = WithT
 
-// inner is an interface that allows users to provide a wrapper around Default.  The wrapper
-// must implement the inner interface and return either the original Default or the result of
-// a call to NewGomega().
-type inner interface {
-	Inner() Gomega
-}
-
-func internalGomega(g Gomega) *internal.Gomega {
-	if v, ok := g.(inner); ok {
-		return v.Inner().(*internal.Gomega)
-	}
-	return g.(*internal.Gomega)
-}
-
 // NewWithT takes a *testing.T and returngs a `gomega.WithT` allowing you to use `Expect`, `Eventually`, and `Consistently` along with
 // Gomega's rich ecosystem of matchers in standard `testing` test suits.
 //
@@ -93,7 +79,7 @@ func internalGomega(g Gomega) *internal.Gomega {
 //        g.Expect(f.HasCow()).To(BeTrue(), "Farm should have cow")
 //     }
 func NewWithT(t types.GomegaTestingT) *WithT {
-	return internal.NewGomega(internalGomega(Default).DurationBundle).ConfigureWithT(t)
+	return internal.NewGomega(Default.(*internal.Gomega).DurationBundle).ConfigureWithT(t)
 }
 
 // NewGomegaWithT is deprecated in favor of gomega.NewWithT, which does not stutter.
@@ -102,20 +88,20 @@ var NewGomegaWithT = NewWithT
 // RegisterFailHandler connects Ginkgo to Gomega. When a matcher fails
 // the fail handler passed into RegisterFailHandler is called.
 func RegisterFailHandler(fail types.GomegaFailHandler) {
-	internalGomega(Default).ConfigureWithFailHandler(fail)
+	Default.(*internal.Gomega).ConfigureWithFailHandler(fail)
 }
 
 // RegisterFailHandlerWithT is deprecated and will be removed in a future release.
 // users should use RegisterFailHandler, or RegisterTestingT
 func RegisterFailHandlerWithT(_ types.GomegaTestingT, fail types.GomegaFailHandler) {
 	fmt.Println("RegisterFailHandlerWithT is deprecated.  Please use RegisterFailHandler or RegisterTestingT instead.")
-	internalGomega(Default).ConfigureWithFailHandler(fail)
+	Default.(*internal.Gomega).ConfigureWithFailHandler(fail)
 }
 
 // RegisterTestingT connects Gomega to Golang's XUnit style
 // Testing.T tests.  It is now deprecated and you should use NewWithT() instead to get a fresh instance of Gomega for each test.
 func RegisterTestingT(t types.GomegaTestingT) {
-	internalGomega(Default).ConfigureWithT(t)
+	Default.(*internal.Gomega).ConfigureWithT(t)
 }
 
 // InterceptGomegaFailures runs a given callback and returns an array of
@@ -126,13 +112,13 @@ func RegisterTestingT(t types.GomegaTestingT) {
 // This is most useful when testing custom matchers, but can also be used to check
 // on a value using a Gomega assertion without causing a test failure.
 func InterceptGomegaFailures(f func()) []string {
-	originalHandler := internalGomega(Default).Fail
+	originalHandler := Default.(*internal.Gomega).Fail
 	failures := []string{}
-	internalGomega(Default).Fail = func(message string, callerSkip ...int) {
+	Default.(*internal.Gomega).Fail = func(message string, callerSkip ...int) {
 		failures = append(failures, message)
 	}
 	defer func() {
-		internalGomega(Default).Fail = originalHandler
+		Default.(*internal.Gomega).Fail = originalHandler
 	}()
 	f()
 	return failures
@@ -145,14 +131,14 @@ func InterceptGomegaFailures(f func()) []string {
 // does not register a failure with the FailHandler registered via RegisterFailHandler - it is up
 // to the user to decide what to do with the returned error
 func InterceptGomegaFailure(f func()) (err error) {
-	originalHandler := internalGomega(Default).Fail
-	internalGomega(Default).Fail = func(message string, callerSkip ...int) {
+	originalHandler := Default.(*internal.Gomega).Fail
+	Default.(*internal.Gomega).Fail = func(message string, callerSkip ...int) {
 		err = errors.New(message)
 		panic("stop execution")
 	}
 
 	defer func() {
-		internalGomega(Default).Fail = originalHandler
+		Default.(*internal.Gomega).Fail = originalHandler
 		if e := recover(); e != nil {
 			if err == nil {
 				panic(e)
@@ -165,7 +151,7 @@ func InterceptGomegaFailure(f func()) (err error) {
 }
 
 func ensureDefaultGomegaIsConfigured() {
-	if !internalGomega(Default).IsConfigured() {
+	if !Default.(*internal.Gomega).IsConfigured() {
 		panic(nilGomegaPanic)
 	}
 }

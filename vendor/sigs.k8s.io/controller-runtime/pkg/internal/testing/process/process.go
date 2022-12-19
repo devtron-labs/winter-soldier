@@ -184,12 +184,16 @@ func (ps *State) Start(stdout, stderr io.Writer) (err error) {
 		ps.ready = true
 		return nil
 	case <-ps.waitDone:
-		close(pollerStopCh)
+		if pollerStopCh != nil {
+			close(pollerStopCh)
+		}
 		return fmt.Errorf("timeout waiting for process %s to start successfully "+
 			"(it may have failed to start, or stopped unexpectedly before becoming ready)",
 			path.Base(ps.Path))
 	case <-timedOut:
-		close(pollerStopCh)
+		if pollerStopCh != nil {
+			close(pollerStopCh)
+		}
 		if ps.Cmd != nil {
 			// intentionally ignore this -- we might've crashed, failed to start, etc
 			ps.Cmd.Process.Signal(syscall.SIGTERM) //nolint:errcheck

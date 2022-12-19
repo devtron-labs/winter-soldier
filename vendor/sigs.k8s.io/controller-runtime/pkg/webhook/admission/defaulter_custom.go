@@ -19,6 +19,7 @@ package admission
 import (
 	"context"
 	"encoding/json"
+
 	"errors"
 	"net/http"
 
@@ -59,8 +60,6 @@ func (h *defaulterForType) Handle(ctx context.Context, req Request) Response {
 	if h.object == nil {
 		panic("object should never be nil")
 	}
-
-	ctx = NewContextWithRequest(ctx, req)
 
 	// Get the object in the request
 	obj := h.object.DeepCopyObject()
