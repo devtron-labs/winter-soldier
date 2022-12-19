@@ -103,7 +103,7 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 	timeElapsedSinceLastRunInSeconds, hasPreviousRun := r.TimeUtil.timeElapsedSinceLastRunInSeconds(&hibernator)
 	if hasPreviousRun && timeElapsedSinceLastRunInSeconds <= pincherv1alpha1.MinReSyncIntervalInSeconds {
 		log.Info("skipping reconciliation as time elapsed since last run is less than 1 min")
-		return ctrl.Result{RequeueAfter: requeueTime}, nil
+		return ctrl.Result{RequeueAfter: time.Duration(pincherv1alpha1.MinReSyncIntervalInSeconds) * time.Second}, nil
 	}
 
 	finalHibernator := &hibernator

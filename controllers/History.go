@@ -31,7 +31,7 @@ func NewHistoryImpl() History {
 	return &HistoryImpl{}
 }
 
-type HistoryImpl struct {}
+type HistoryImpl struct{}
 
 func (r *HistoryImpl) getLatestHistory(revisionHistories []v1alpha1.RevisionHistory) *v1alpha1.RevisionHistory {
 	maxID := int64(-1)
@@ -60,7 +60,7 @@ func (r *HistoryImpl) getNewRevisionID(revisionHistories []v1alpha1.RevisionHist
 	return maxID + 1
 }
 
-//TODO: if last entry in history is same as the new entry for example both has hibernate==true then merge them
+// TODO: if last entry in history is same as the new entry for example both has hibernate==true then merge them
 func (r *HistoryImpl) addToHistory(history v1alpha1.RevisionHistory, revisionHistories []v1alpha1.RevisionHistory, reSync bool) []v1alpha1.RevisionHistory {
 	//if len(revisionHistories) < 10 {
 	//	revisionHistories = append(revisionHistories, history)

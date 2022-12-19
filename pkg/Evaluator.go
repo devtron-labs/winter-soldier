@@ -63,7 +63,7 @@ type resourceParser struct {
 var memoryParser *resourceParser
 var cpuParser *resourceParser
 
-//TODO: handle date and memory and cpu properly
+// TODO: handle date and memory and cpu properly
 func ExpressionEvaluator(expression, json string) bool {
 	if variableRegex == nil {
 		variableRegex, _ = regexp.Compile(variablePattern)
