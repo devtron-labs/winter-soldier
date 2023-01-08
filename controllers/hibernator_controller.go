@@ -115,7 +115,7 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 	} else if hibernator.Spec.Action == pincherv1alpha1.Scale {
 		finalHibernator, updated = r.HibernatorAction.scale(&hibernator, nearestTimeGap)
 	} else {
-		log.Info("didnt hibernate or unHibernate - action: %s, timegap: %d, hibernating: %t", nearestTimeGap.WithinRange, nearestTimeGap.TimeGapInSeconds, hibernator.Status.IsHibernating)
+		log.Info("didnt hibernate or unHibernate -", "action", nearestTimeGap.WithinRange, "timegap", nearestTimeGap.TimeGapInSeconds, "isHibernating", hibernator.Status.IsHibernating)
 	}
 
 	if updated {
