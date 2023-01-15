@@ -140,7 +140,7 @@ func (t *TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) (Nearest
 	timeWithZone := instant.In(loc)
 	nearestTimeGap := 2147483647
 	nearestTimeGapInRange := false
-	normalizedTimeRanges := t.normalizeTimeRange()
+	normalizedTimeRanges, normalizedIndex := t.normalizeTimeRange()
 	var matchedTimeRange *TimeRange
 	matchedIndex := -1
 	for index, tr := range normalizedTimeRanges {
@@ -158,7 +158,7 @@ func (t *TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) (Nearest
 			nearestTimeGapInRange = contains
 			t := cloneTimeRange(tr)
 			matchedTimeRange = &t
-			matchedIndex = index
+			matchedIndex = normalizedIndex[index]
 		} else if nearestTimeGap > timeGap && !nearestTimeGapInRange {
 			nearestTimeGap = timeGap
 			nearestTimeGapInRange = contains
@@ -166,24 +166,24 @@ func (t *TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) (Nearest
 			matchedTimeRange = &t
 		}
 
-		//if (nearestTimeGap > timeGap && ((contains && nearestTimeGapInRange) || !nearestTimeGapInRange)) || (contains && !nearestTimeGapInRange) {
+		//if (nearestTimeGap > timeGapInSeconds && ((contains && nearestTimeGapInRange) || !nearestTimeGapInRange)) || (contains && !nearestTimeGapInRange) {
 		//
 		//}
 
-		//if contains && nearestTimeGapInRange && nearestTimeGap > timeGap {
-		//	nearestTimeGap = timeGap
+		//if contains && nearestTimeGapInRange && nearestTimeGap > timeGapInSeconds {
+		//	nearestTimeGap = timeGapInSeconds
 		//	nearestTimeGapInRange = contains
 		//	t := cloneTimeRange(tr)
 		//	matchedTimeRange = &t
 		//	matchedIndex = index
 		//} else if contains && !nearestTimeGapInRange {
-		//	nearestTimeGap = timeGap
+		//	nearestTimeGap = timeGapInSeconds
 		//	nearestTimeGapInRange = contains
 		//	t := cloneTimeRange(tr)
 		//	matchedTimeRange = &t
 		//	matchedIndex = index
-		//} else if !nearestTimeGapInRange && nearestTimeGap > timeGap {
-		//	nearestTimeGap = timeGap
+		//} else if !nearestTimeGapInRange && nearestTimeGap > timeGapInSeconds {
+		//	nearestTimeGap = timeGapInSeconds
 		//	nearestTimeGapInRange = contains
 		//	t := cloneTimeRange(tr)
 		//	matchedTimeRange = &t
@@ -198,21 +198,25 @@ func (t *TimeRangesWithZone) NearestTimeGapInSeconds(instant time.Time) (Nearest
 	}, nil
 }
 
-func (t *TimeRangesWithZone) normalizeTimeRange() []TimeRange {
+func (t *TimeRangesWithZone) normalizeTimeRange() ([]TimeRange, []int) {
 	var normalizedTimeRanges []TimeRange
-	for _, tr := range t.TimeRanges {
+	var normalizedIndex []int
+	for index, tr := range t.TimeRanges {
 		if tr.WeekdayFrom.toOrdinal() < tr.WeekdayTo.toOrdinal() {
 			normalizedTimeRanges = append(normalizedTimeRanges, tr)
+			normalizedIndex = append(normalizedIndex, index)
 		} else {
 			tr1 := cloneTimeRange(tr)
 			tr1.WeekdayTo = Sat
 			tr2 := cloneTimeRange(tr)
 			tr2.WeekdayFrom = Sun
 			normalizedTimeRanges = append(normalizedTimeRanges, tr1)
+			normalizedIndex = append(normalizedIndex, index)
 			normalizedTimeRanges = append(normalizedTimeRanges, tr2)
+			normalizedIndex = append(normalizedIndex, index)
 		}
 	}
-	return normalizedTimeRanges
+	return normalizedTimeRanges, normalizedIndex
 }
 
 func (t *TimeRange) NearestTimeGapInSeconds(instant time.Time) (int, bool, error) {
