@@ -30,10 +30,12 @@ import (
 )
 
 const (
-	layout                    = "Jan 2, 2006 3:04pm"
-	replicaPatch              = `[{"op": "replace", "path": "/spec/replicas", "value":%d}]`
-	replicaAndAnnotationPatch = `[{"op": "replace", "path": "/spec/replicas", "value":%d}, {"op": "add", "path": "/metadata/annotations", "value": {"%s":"%s"}}]`
-	replicaAnnotation         = `hibernator.devtron.ai/replicas`
+	layout                       = "Jan 2, 2006 3:04pm"
+	replicaPatch                 = `[{"op": "replace", "path": "/spec/replicas", "value":%d}]`
+	replicaAndAnnotationPatch    = `[{"op": "replace", "path": "/spec/replicas", "value":%d}, {"op": "add", "path": "/metadata/annotations", "value": {"%s":"%s"}}]`
+	replicaAnnotation            = `hibernator.devtron.ai/replicas`
+	minReplicaPatch              = `[{"op": "replace", "path": "/spec/minReplicas", "value":%d}]`
+	minReplicaAndAnnotationPatch = `[{"op": "replace", "path": "/spec/minReplicas", "value":%d}, {"op": "add", "path": "/metadata/annotations", "value": {"%s":"%s"}}]`
 )
 
 // HibernatorReconciler reconciles a Hibernator object

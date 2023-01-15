@@ -110,6 +110,13 @@ func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibe
 				patch = fmt.Sprintf(replicaAndAnnotationPatch, targetReplicaCount, replicaAnnotation, replicaCount.Raw)
 			}
 
+			if inc.GetKind() == "HorizontalPodAutoscaler" {
+				patch = fmt.Sprintf(minReplicaPatch, targetReplicaCount)
+				if !r.hasReplicaAnnotation(inc) {
+					patch = fmt.Sprintf(minReplicaAndAnnotationPatch, targetReplicaCount, replicaAnnotation, replicaCount.Raw)
+				}
+			}
+
 			impactedObject := pincherv1alpha1.ImpactedObject{
 				ResourceKey:   getResourceKey(inc),
 				OriginalCount: int(replicaCount.Int()),
@@ -183,11 +190,17 @@ func (r *ResourceActionImpl) ResetScaleActionFactory(hibernator *pincherv1alpha1
 				Status:        "success",
 			}
 
+			patch := fmt.Sprintf(replicaPatch, replicaCount)
+
+			if inc.GetKind() == "HorizontalPodAutoscaler" {
+				patch = fmt.Sprintf(minReplicaPatch, replicaCount)
+			}
+
 			request := &pkg.PatchRequest{
 				Name:             inc.GetName(),
 				Namespace:        inc.GetNamespace(),
 				GroupVersionKind: inc.GroupVersionKind(),
-				Patch:            fmt.Sprintf(replicaPatch, replicaCount),
+				Patch:            patch,
 				PatchType:        string(types.JSONPatchType),
 			}
 			_, err = r.Kubectl.PatchResource(context.Background(), request)
