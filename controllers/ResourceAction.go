@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"strconv"
+	"time"
 )
 
 type Execute func(included []unstructured.Unstructured) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject)
@@ -78,7 +79,7 @@ func (r *ResourceActionImpl) DeleteAction(included []unstructured.Unstructured) 
 }
 
 func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) Execute {
-
+	fmt.Printf("entering ScaleActionFactory %s \n", time.Now().Format(time.RFC822))
 	targetReplicaCount := 0
 	if hibernator.Spec.TargetReplicas != nil && len(*hibernator.Spec.TargetReplicas) > timeGap.MatchedIndex {
 		targetReplicaCount = (*hibernator.Spec.TargetReplicas)[timeGap.MatchedIndex]
@@ -87,6 +88,7 @@ func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibe
 		targetReplicaCount = 0
 	}
 
+	fmt.Printf("entering ScaleActionFactory %d \n", targetReplicaCount)
 	return func(included []unstructured.Unstructured) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject) {
 
 		impactedObjects := make([]pincherv1alpha1.ImpactedObject, 0)
@@ -107,7 +109,10 @@ func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibe
 
 			patch := fmt.Sprintf(replicaPatch, targetReplicaCount)
 			if !r.hasReplicaAnnotation(inc) {
+				fmt.Println("annotation missing in ScaleActionFactory")
 				patch = fmt.Sprintf(replicaAndAnnotationPatch, targetReplicaCount, replicaAnnotation, replicaCount.Raw)
+			} else {
+				fmt.Println("annotation found in ScaleActionFactory")
 			}
 
 			if inc.GetKind() == "HorizontalPodAutoscaler" {
@@ -149,7 +154,7 @@ func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibe
 }
 
 func (r *ResourceActionImpl) ResetScaleActionFactory(hibernator *pincherv1alpha1.Hibernator) Execute {
-
+	fmt.Printf("entering ResetScaleActionFactory %s \n", time.Now().Format(time.RFC822))
 	previousHibernatedObjects := make(map[string]int, 0)
 	latestHistory := r.historyUtil.getLatestHistory(hibernator.Status.History)
 	if latestHistory != nil {
