@@ -111,6 +111,11 @@ func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibe
 			}
 
 			if inc.GetKind() == "HorizontalPodAutoscaler" {
+				replicaCount = gjson.Get(string(to), "spec.minReplicas")
+
+				if int(replicaCount.Int()) == targetReplicaCount {
+					continue
+				}
 				patch = fmt.Sprintf(minReplicaPatch, targetReplicaCount)
 				if !r.hasReplicaAnnotation(inc) {
 					patch = fmt.Sprintf(minReplicaAndAnnotationPatch, targetReplicaCount, replicaAnnotation, replicaCount.Raw)
