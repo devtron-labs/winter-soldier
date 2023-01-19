@@ -79,7 +79,7 @@ func (r *ResourceActionImpl) DeleteAction(included []unstructured.Unstructured) 
 }
 
 func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) Execute {
-	fmt.Printf("entering ScaleActionFactory %s \n", time.Now().Format(time.RFC822))
+	fmt.Printf("entering ScaleActionFactory %s \n", time.Now().Format(time.RFC1123Z))
 	targetReplicaCount := 0
 	if hibernator.Spec.TargetReplicas != nil && len(*hibernator.Spec.TargetReplicas) > timeGap.MatchedIndex {
 		targetReplicaCount = (*hibernator.Spec.TargetReplicas)[timeGap.MatchedIndex]
@@ -154,7 +154,7 @@ func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibe
 }
 
 func (r *ResourceActionImpl) ResetScaleActionFactory(hibernator *pincherv1alpha1.Hibernator) Execute {
-	fmt.Printf("entering ResetScaleActionFactory %s \n", time.Now().Format(time.RFC822))
+	fmt.Printf("entering ResetScaleActionFactory %s \n", time.Now().Format(time.RFC1123Z))
 	previousHibernatedObjects := make(map[string]int, 0)
 	latestHistory := r.historyUtil.getLatestHistory(hibernator.Status.History)
 	if latestHistory != nil {
@@ -175,7 +175,11 @@ func (r *ResourceActionImpl) ResetScaleActionFactory(hibernator *pincherv1alpha1
 			}
 
 			currentReplicaCount := gjson.Get(string(to), "spec.replicas")
-			replicaCount, err := r.getOriginalReplicaCount(inc, previousHibernatedObjects)
+
+			replicaCount, err := r.getOriginalReplicaCount(inc)
+			if err != nil {
+				continue
+			}
 
 			if replicaCount == 0 && hibernator.Spec.Action == pincherv1alpha1.Hibernate {
 				continue
@@ -226,7 +230,7 @@ func (r *ResourceActionImpl) ResetScaleActionFactory(hibernator *pincherv1alpha1
 	}
 }
 
-func (r *ResourceActionImpl) getOriginalReplicaCount(res unstructured.Unstructured, previousHibernatedObjects map[string]int) (int, error) {
+func (r *ResourceActionImpl) getOriginalReplicaCount(res unstructured.Unstructured /*, previousHibernatedObjects map[string]int*/) (int, error) {
 	to, err := res.MarshalJSON()
 	if err != nil {
 		return 0, err
@@ -234,14 +238,14 @@ func (r *ResourceActionImpl) getOriginalReplicaCount(res unstructured.Unstructur
 	annotations := gjson.Get(string(to), "metadata.annotations")
 	originalCount := annotations.Map()[replicaAnnotation].Str
 	replicaCount, err := strconv.Atoi(originalCount)
-	if len(originalCount) == 0 || err != nil {
-		resourceKey := getResourceKey(res)
-		ok := false
-		if replicaCount, ok = previousHibernatedObjects[resourceKey]; !ok {
-			return 0, nil
-		}
-	}
-	return replicaCount, nil
+	//if len(originalCount) == 0 || err != nil {
+	//	resourceKey := getResourceKey(res)
+	//	ok := false
+	//	if replicaCount, ok = previousHibernatedObjects[resourceKey]; !ok {
+	//		return 0, nil
+	//	}
+	//}
+	return replicaCount, err
 }
 
 func (r *ResourceActionImpl) hasReplicaAnnotation(res unstructured.Unstructured) bool {
