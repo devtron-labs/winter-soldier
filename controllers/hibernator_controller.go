@@ -112,7 +112,7 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 	updated := false
 	if hibernator.Spec.Action == pincherv1alpha1.Delete {
 		finalHibernator, updated = r.HibernatorAction.delete(&hibernator)
-	} else if hibernator.Spec.Action == pincherv1alpha1.Hibernate {
+	} else if hibernator.Spec.Action == pincherv1alpha1.Hibernate || hibernator.Spec.Action == pincherv1alpha1.Sleep {
 		finalHibernator, updated = r.HibernatorAction.hibernate(&hibernator, nearestTimeGap)
 	} else if hibernator.Spec.Action == pincherv1alpha1.Scale {
 		finalHibernator, updated = r.HibernatorAction.scale(&hibernator, nearestTimeGap)

@@ -153,6 +153,7 @@ const (
 	Hibernate   Action = "hibernate"
 	UnHibernate Action = "unhibernate"
 	Scale       Action = "scale"
+	Sleep       Action = "sleep" // for legacy reason; sleep is same as hibernate
 )
 
 type Weekday string

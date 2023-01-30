@@ -84,7 +84,7 @@ func (r *HibernatorActionImpl) hibernate(hibernator *pincherv1alpha1.Hibernator,
 	}
 
 	if shouldHibernate {
-		reSync = hibernator.Status.Action == pincherv1alpha1.Hibernate
+		reSync = hibernator.Status.Action == pincherv1alpha1.Hibernate || hibernator.Status.Action == pincherv1alpha1.Sleep
 		hibernator.Status.Action = pincherv1alpha1.Hibernate
 		impactedObjects, excludedObjects = r.executeRules(hibernator, r.resourceAction.ScaleActionFactory(hibernator, timeGap), reSync)
 	} else {
