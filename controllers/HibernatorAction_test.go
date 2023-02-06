@@ -66,7 +66,7 @@ func TestHibernatorActionImpl_unHibernate(t *testing.T) {
 					factory: pkg.NewMockFactory,
 				},
 			},
-			want1: true,
+			want1: false,
 			want: Response{
 				impactedObjects: []pincherv1alpha1.ImpactedObject{
 					{ResourceKey: "/pras/apps/v1/Deployment/rss-site", OriginalCount: 2, Status: "success"},
@@ -86,7 +86,13 @@ func TestHibernatorActionImpl_unHibernate(t *testing.T) {
 				resourceSelector: tt.fields.resourceSelector,
 			}
 			got, got1 := r.unHibernate(tt.args.hibernator)
-			if len(got.Status.History) != 1 {
+			if got1 != tt.want1 {
+				t.Errorf("hibernate() got = %t, want %t", got1, tt.want1)
+			}
+			if tt.want1 == false {
+				return
+			}
+			if got.Status.History != nil {
 				t.Errorf("hibernate() got = %v, want %v", got, tt.want)
 			}
 			if len(got.Status.History[0].ImpactedObjects) != len(tt.want.impactedObjects) {
@@ -160,6 +166,7 @@ func TestHibernatorActionImpl_hibernate(t *testing.T) {
 	}
 	type args struct {
 		hibernator *pincherv1alpha1.Hibernator
+		timeGap    pincherv1alpha1.NearestTimeGap
 	}
 	tests := []struct {
 		name   string
@@ -170,7 +177,10 @@ func TestHibernatorActionImpl_hibernate(t *testing.T) {
 	}{
 		{
 			name: "base case",
-			args: args{hibernator: &pkg.HibernateTest},
+			args: args{
+				hibernator: &pkg.HibernateTest,
+				timeGap:    pincherv1alpha1.NearestTimeGap{WithinRange: true},
+			},
 			fields: fields{
 				Kubectl:     kubectl,
 				historyUtil: &HistoryImpl{},
@@ -202,7 +212,7 @@ func TestHibernatorActionImpl_hibernate(t *testing.T) {
 				resourceAction:   tt.fields.resourceAction,
 				resourceSelector: tt.fields.resourceSelector,
 			}
-			got, got1 := r.hibernate(tt.args.hibernator)
+			got, got1 := r.hibernate(tt.args.hibernator, tt.args.timeGap)
 			if len(got.Status.History) != 1 {
 				t.Errorf("hibernate() got = %v, want %v", got, tt.want)
 			}

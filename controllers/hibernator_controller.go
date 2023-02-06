@@ -30,9 +30,12 @@ import (
 )
 
 const (
-	layout            = "Jan 2, 2006 3:04pm"
-	fullPatch         = `[{"op": "replace", "path": "/spec/replicas", "value":%d}, {"op": "add", "path": "/metadata/annotations", "value": {"%s":"%s"}}]`
-	replicaAnnotation = `hibernator.devtron.ai/replicas`
+	layout                       = "Jan 2, 2006 3:04pm"
+	replicaPatch                 = `[{"op": "replace", "path": "/spec/replicas", "value":%d}]`
+	replicaAndAnnotationPatch    = `[{"op": "replace", "path": "/spec/replicas", "value":%d}, {"op": "add", "path": "/metadata/annotations", "value": {"%s":"%s"}}]`
+	replicaAnnotation            = `hibernator.devtron.ai/replicas`
+	minReplicaPatch              = `[{"op": "replace", "path": "/spec/minReplicas", "value":%d}]`
+	minReplicaAndAnnotationPatch = `[{"op": "replace", "path": "/spec/minReplicas", "value":%d}, {"op": "add", "path": "/metadata/annotations", "value": {"%s":"%s"}}]`
 )
 
 // HibernatorReconciler reconciles a Hibernator object
@@ -49,14 +52,14 @@ type HibernatorReconciler struct {
 // +kubebuilder:rbac:groups=pincher.devtron.ai,resources=hibernators,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=pincher.devtron.ai,resources=hibernators/status,verbs=get;update;patch
 
-func (r *HibernatorReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *HibernatorReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	//_ = context.Background()
 	log := r.Log.WithValues("hibernator", req.NamespacedName)
 
 	// your logic here
 	//r.Client.Get()
 	hibernator := pincherv1alpha1.Hibernator{}
-	err := r.Client.Get(context.Background(), req.NamespacedName, &hibernator)
+	err := r.Client.Get(ctx, req.NamespacedName, &hibernator)
 	if err != nil {
 		log.Error(err, "error while fetching hibernator")
 		return ctrl.Result{}, err
@@ -84,7 +87,7 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 
 	//TODO: calculation may be different for delete
 	timeRangeWithZone := hibernator.Spec.When
-	timeGap, shouldHibernate, err := timeRangeWithZone.NearestTimeGapInSeconds(now)
+	nearestTimeGap, err := timeRangeWithZone.NearestTimeGapInSeconds(now)
 	//even if timeGap is error if reSyncInterval is set, it should still be able to work in case of delete
 	if err != nil {
 		log.Error(err, "unable to parse the time interval")
@@ -97,31 +100,24 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 		}
 	}
 
-	requeueTime := r.TimeUtil.getRequeueTimeDuration(timeGap, &hibernator)
+	requeueTime := r.TimeUtil.getRequeueTimeDuration(nearestTimeGap.TimeGapInSeconds, &hibernator)
 
 	timeElapsedSinceLastRunInSeconds, hasPreviousRun := r.TimeUtil.timeElapsedSinceLastRunInSeconds(&hibernator)
 	if hasPreviousRun && timeElapsedSinceLastRunInSeconds <= pincherv1alpha1.MinReSyncIntervalInSeconds {
 		log.Info("skipping reconciliation as time elapsed since last run is less than 1 min")
-		return ctrl.Result{RequeueAfter: requeueTime}, nil
-	}
-
-	if hibernator.Spec.Hibernate {
-		shouldHibernate = true
-	}
-	if hibernator.Spec.UnHibernate {
-		shouldHibernate = false
+		return ctrl.Result{RequeueAfter: time.Duration(pincherv1alpha1.MinReSyncIntervalInSeconds) * time.Second}, nil
 	}
 
 	finalHibernator := &hibernator
 	updated := false
 	if hibernator.Spec.Action == pincherv1alpha1.Delete {
 		finalHibernator, updated = r.HibernatorAction.delete(&hibernator)
-	} else if !shouldHibernate {
-		finalHibernator, updated = r.HibernatorAction.unHibernate(&hibernator)
-	} else if shouldHibernate {
-		finalHibernator, updated = r.HibernatorAction.hibernate(&hibernator)
+	} else if hibernator.Spec.Action == pincherv1alpha1.Hibernate || hibernator.Spec.Action == pincherv1alpha1.Sleep {
+		finalHibernator, updated = r.HibernatorAction.hibernate(&hibernator, nearestTimeGap)
+	} else if hibernator.Spec.Action == pincherv1alpha1.Scale {
+		finalHibernator, updated = r.HibernatorAction.scale(&hibernator, nearestTimeGap)
 	} else {
-		log.Info("didnt hibernate or unHibernate - action: %s, timegap: %d, hibernating: %t", shouldHibernate, timeGap, hibernator.Status.IsHibernating)
+		log.Info("didnt hibernate or unHibernate -", "action", nearestTimeGap.WithinRange, "timegap", nearestTimeGap.TimeGapInSeconds, "isHibernating", hibernator.Status.IsHibernating)
 	}
 
 	if updated {

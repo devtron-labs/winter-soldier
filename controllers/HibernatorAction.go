@@ -25,9 +25,9 @@ import (
 )
 
 type HibernatorAction interface {
-	unHibernate(hibernator *pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, bool)
-	hibernate(hibernator *pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, bool)
+	hibernate(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) (*pincherv1alpha1.Hibernator, bool)
 	delete(hibernator *pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, bool)
+	scale(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) (*pincherv1alpha1.Hibernator, bool)
 	executeRules(hibernator *pincherv1alpha1.Hibernator, execute Execute, reSync bool) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject)
 }
 
@@ -48,14 +48,12 @@ type HibernatorActionImpl struct {
 }
 
 func (r *HibernatorActionImpl) unHibernate(hibernator *pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, bool) {
-	//log := r.Log.WithValues("hibernator", getNamespacedName(hibernator))
-	//
-	//log.Info("initiating unHibernate")
 
-	reSync := hibernator.Status.Action == pincherv1alpha1.UnHibernate || hibernator.Status.Action == pincherv1alpha1.Delete
+	reSync := hibernator.Status.Action == hibernator.Spec.Action
 
 	hibernator.Status.Action = pincherv1alpha1.UnHibernate
-	impactedObjects, excludedObjects := r.executeRules(hibernator, r.resourceAction.UnHibernateActionFactory(hibernator), reSync)
+
+	impactedObjects, excludedObjects := r.executeRules(hibernator, r.resourceAction.ResetScaleActionFactory(hibernator), reSync)
 
 	if len(impactedObjects) > 0 {
 		history := pincherv1alpha1.RevisionHistory{
@@ -72,17 +70,28 @@ func (r *HibernatorActionImpl) unHibernate(hibernator *pincherv1alpha1.Hibernato
 	return hibernator, len(impactedObjects) > 0
 }
 
-func (r *HibernatorActionImpl) hibernate(hibernator *pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, bool) {
-	//log := r.Log.WithValues("hibernator", getNamespacedName(hibernator))
-	//log.Info("starting hibernate")
+func (r *HibernatorActionImpl) hibernate(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) (*pincherv1alpha1.Hibernator, bool) {
 
-	reSync := hibernator.Spec.Action == hibernator.Status.Action
+	impactedObjects, excludedObjects := make([]pincherv1alpha1.ImpactedObject, 0), make([]pincherv1alpha1.ExcludedObject, 0)
+	reSync := false
 
-	hibernator.Status.Action = pincherv1alpha1.Hibernate
+	shouldHibernate := timeGap.WithinRange
+	if hibernator.Spec.UnHibernate {
+		shouldHibernate = false
+	}
+	if hibernator.Spec.Hibernate {
+		shouldHibernate = true
+	}
 
-	//patchZero := fmt.Sprintf(patch, 0)
-
-	impactedObjects, excludedObjects := r.executeRules(hibernator, r.resourceAction.HibernateAction, reSync)
+	if shouldHibernate {
+		reSync = hibernator.Status.Action == pincherv1alpha1.Hibernate || hibernator.Status.Action == pincherv1alpha1.Sleep
+		hibernator.Status.Action = pincherv1alpha1.Hibernate
+		impactedObjects, excludedObjects = r.executeRules(hibernator, r.resourceAction.ScaleActionFactory(hibernator, timeGap), reSync)
+	} else {
+		reSync = hibernator.Status.Action == pincherv1alpha1.UnHibernate
+		hibernator.Status.Action = pincherv1alpha1.UnHibernate
+		impactedObjects, excludedObjects = r.executeRules(hibernator, r.resourceAction.ResetScaleActionFactory(hibernator), reSync)
+	}
 
 	if len(impactedObjects) > 0 {
 		history := pincherv1alpha1.RevisionHistory{
@@ -92,6 +101,9 @@ func (r *HibernatorActionImpl) hibernate(hibernator *pincherv1alpha1.Hibernator)
 			ImpactedObjects: impactedObjects,
 			ExcludedObjects: excludedObjects,
 		}
+		if !shouldHibernate {
+			history.Action = pincherv1alpha1.UnHibernate
+		}
 		hibernator.Status.History = r.historyUtil.addToHistory(history, hibernator.Status.History, reSync)
 	}
 
@@ -100,8 +112,6 @@ func (r *HibernatorActionImpl) hibernate(hibernator *pincherv1alpha1.Hibernator)
 }
 
 func (r *HibernatorActionImpl) delete(hibernator *pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, bool) {
-	//log := r.Log.WithValues("hibernator", getNamespacedName(hibernator))
-	//log.Info("starting delete")
 
 	reSync := hibernator.Spec.Action == hibernator.Status.Action
 
@@ -121,6 +131,34 @@ func (r *HibernatorActionImpl) delete(hibernator *pincherv1alpha1.Hibernator) (*
 	}
 
 	//log.Info("ending delete")
+	return hibernator, len(impactedObjects) > 0
+}
+
+func (r *HibernatorActionImpl) scale(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) (*pincherv1alpha1.Hibernator, bool) {
+
+	reSync := hibernator.Spec.Action == hibernator.Status.Action
+
+	hibernator.Status.Action = pincherv1alpha1.Scale
+
+	impactedObjects, excludedObjects := make([]pincherv1alpha1.ImpactedObject, 0), make([]pincherv1alpha1.ExcludedObject, 0)
+	if timeGap.WithinRange {
+		impactedObjects, excludedObjects = r.executeRules(hibernator, r.resourceAction.ScaleActionFactory(hibernator, timeGap), reSync)
+	} else {
+		impactedObjects, excludedObjects = r.executeRules(hibernator, r.resourceAction.ResetScaleActionFactory(hibernator), reSync)
+	}
+
+	if len(impactedObjects) > 0 {
+		history := pincherv1alpha1.RevisionHistory{
+			Time:            metav1.Time{Time: time.Now()},
+			ID:              r.historyUtil.getNewRevisionID(hibernator.Status.History),
+			Action:          pincherv1alpha1.Scale,
+			ImpactedObjects: impactedObjects,
+			ExcludedObjects: excludedObjects,
+		}
+		hibernator.Status.History = r.historyUtil.addToHistory(history, hibernator.Status.History, reSync)
+	}
+
+	//log.Info("ending hibernate")
 	return hibernator, len(impactedObjects) > 0
 }
 

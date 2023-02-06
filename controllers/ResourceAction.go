@@ -26,14 +26,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"strconv"
+	"time"
 )
 
 type Execute func(included []unstructured.Unstructured) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject)
 
 type ResourceAction interface {
 	DeleteAction(included []unstructured.Unstructured) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject)
-	HibernateAction(included []unstructured.Unstructured) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject)
-	UnHibernateActionFactory(hibernator *pincherv1alpha1.Hibernator) Execute
+	ScaleActionFactory(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) Execute
+	ResetScaleActionFactory(hibernator *pincherv1alpha1.Hibernator) Execute
 }
 
 func NewResourceActionImpl(kubectl pkg.KubectlCmd, historyUtil History) ResourceAction {
@@ -68,7 +69,6 @@ func (r *ResourceActionImpl) DeleteAction(included []unstructured.Unstructured) 
 		_, err := r.Kubectl.DeleteResource(context.Background(), request)
 
 		if err != nil {
-			//log.Error(err, "action on object %s", requestObj)
 			impactedObject.Status = "error"
 			impactedObject.Message = err.Error()
 		}
@@ -78,54 +78,85 @@ func (r *ResourceActionImpl) DeleteAction(included []unstructured.Unstructured) 
 	return impactedObjects, excludedObjects
 }
 
-func (r *ResourceActionImpl) HibernateAction(included []unstructured.Unstructured) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject) {
-	impactedObjects := make([]pincherv1alpha1.ImpactedObject, 0)
-	excludedObjects := make([]pincherv1alpha1.ExcludedObject, 0)
-
-	for _, inc := range included {
-
-		to, err := inc.MarshalJSON()
-		if err != nil {
-			continue
-		}
-
-		replicaCount := gjson.Get(string(to), "spec.replicas")
-
-		if replicaCount.Int() == 0 {
-			continue
-		}
-
-		impactedObject := pincherv1alpha1.ImpactedObject{
-			ResourceKey:   getResourceKey(inc),
-			OriginalCount: int(replicaCount.Int()),
-			Status:        "success",
-		}
-
-		request := &pkg.PatchRequest{
-			Name:             inc.GetName(),
-			Namespace:        inc.GetNamespace(),
-			GroupVersionKind: inc.GroupVersionKind(),
-			Patch:            fmt.Sprintf(fullPatch, 0, replicaAnnotation, replicaCount.Raw),
-			PatchType:        string(types.JSONPatchType),
-		}
-		_, err = r.Kubectl.PatchResource(context.Background(), request)
-
-		if err != nil {
-			//log.Error(err, "action on object %s", requestObj)
-			impactedObject.Status = "error"
-			impactedObject.Message = err.Error()
-		}
-
-		impactedObjects = append(impactedObjects, impactedObject)
+func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) Execute {
+	fmt.Printf("entering ScaleActionFactory %s \n", time.Now().Format(time.RFC1123Z))
+	targetReplicaCount := 0
+	if hibernator.Spec.TargetReplicas != nil && len(*hibernator.Spec.TargetReplicas) > timeGap.MatchedIndex {
+		targetReplicaCount = (*hibernator.Spec.TargetReplicas)[timeGap.MatchedIndex]
 	}
-	return impactedObjects, excludedObjects
+	if hibernator.Spec.Action == pincherv1alpha1.Hibernate || hibernator.Spec.Action == pincherv1alpha1.Sleep {
+		targetReplicaCount = 0
+	}
+
+	fmt.Printf("entering ScaleActionFactory %d \n", targetReplicaCount)
+	return func(included []unstructured.Unstructured) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject) {
+
+		impactedObjects := make([]pincherv1alpha1.ImpactedObject, 0)
+		excludedObjects := make([]pincherv1alpha1.ExcludedObject, 0)
+
+		for _, inc := range included {
+
+			to, err := inc.MarshalJSON()
+			if err != nil {
+				continue
+			}
+
+			replicaCount := gjson.Get(string(to), "spec.replicas")
+
+			if int(replicaCount.Int()) == targetReplicaCount {
+				continue
+			}
+
+			patch := fmt.Sprintf(replicaPatch, targetReplicaCount)
+			if !r.hasReplicaAnnotation(inc) {
+				fmt.Println("annotation missing in ScaleActionFactory")
+				patch = fmt.Sprintf(replicaAndAnnotationPatch, targetReplicaCount, replicaAnnotation, replicaCount.Raw)
+			} else {
+				fmt.Println("annotation found in ScaleActionFactory")
+			}
+
+			if inc.GetKind() == "HorizontalPodAutoscaler" {
+				replicaCount = gjson.Get(string(to), "spec.minReplicas")
+
+				if int(replicaCount.Int()) == targetReplicaCount {
+					continue
+				}
+				patch = fmt.Sprintf(minReplicaPatch, targetReplicaCount)
+				if !r.hasReplicaAnnotation(inc) {
+					patch = fmt.Sprintf(minReplicaAndAnnotationPatch, targetReplicaCount, replicaAnnotation, replicaCount.Raw)
+				}
+			}
+
+			impactedObject := pincherv1alpha1.ImpactedObject{
+				ResourceKey:   getResourceKey(inc),
+				OriginalCount: int(replicaCount.Int()),
+				Status:        "success",
+			}
+
+			request := &pkg.PatchRequest{
+				Name:             inc.GetName(),
+				Namespace:        inc.GetNamespace(),
+				GroupVersionKind: inc.GroupVersionKind(),
+				Patch:            patch,
+				PatchType:        string(types.JSONPatchType),
+			}
+			_, err = r.Kubectl.PatchResource(context.Background(), request)
+
+			if err != nil {
+				impactedObject.Status = "error"
+				impactedObject.Message = err.Error()
+			}
+
+			impactedObjects = append(impactedObjects, impactedObject)
+		}
+		return impactedObjects, excludedObjects
+	}
 }
 
-func (r *ResourceActionImpl) UnHibernateActionFactory(hibernator *pincherv1alpha1.Hibernator) Execute {
-	latestHistory := r.historyUtil.getLatestHistory(hibernator.Status.History)
-
+func (r *ResourceActionImpl) ResetScaleActionFactory(hibernator *pincherv1alpha1.Hibernator) Execute {
+	fmt.Printf("entering ResetScaleActionFactory %s \n", time.Now().Format(time.RFC1123Z))
 	previousHibernatedObjects := make(map[string]int, 0)
-
+	latestHistory := r.historyUtil.getLatestHistory(hibernator.Status.History)
 	if latestHistory != nil {
 		for _, impactedObject := range latestHistory.ImpactedObjects {
 			previousHibernatedObjects[impactedObject.ResourceKey] = impactedObject.OriginalCount
@@ -143,22 +174,27 @@ func (r *ResourceActionImpl) UnHibernateActionFactory(hibernator *pincherv1alpha
 				continue
 			}
 
-			annotations := gjson.Get(string(to), "metadata.annotations")
-			originalCount := annotations.Map()[replicaAnnotation].Str
-			replicaCount, err := strconv.Atoi(originalCount)
-			if len(originalCount) == 0 || err != nil {
-				resourceKey := getResourceKey(inc)
-				ok := false
-				if replicaCount, ok = previousHibernatedObjects[resourceKey]; !ok {
-					excludedObject := pincherv1alpha1.ExcludedObject{
-						ResourceKey: getResourceKey(inc),
-						Reason:      "error determining original count",
-					}
-					excludedObjects = append(excludedObjects, excludedObject)
-					continue
-				}
+			currentReplicaCount := gjson.Get(string(to), "spec.replicas")
+
+			replicaCount, err := r.getOriginalReplicaCount(inc)
+			if err != nil {
+				continue
 			}
-			if replicaCount == 0 {
+
+			if replicaCount == 0 && (hibernator.Spec.Action == pincherv1alpha1.Hibernate || hibernator.Spec.Action == pincherv1alpha1.Sleep) {
+				continue
+			}
+
+			if replicaCount == int(currentReplicaCount.Int()) {
+				continue
+			}
+
+			if err != nil {
+				excludedObject := pincherv1alpha1.ExcludedObject{
+					ResourceKey: getResourceKey(inc),
+					Reason:      "error determining original count",
+				}
+				excludedObjects = append(excludedObjects, excludedObject)
 				continue
 			}
 
@@ -168,17 +204,22 @@ func (r *ResourceActionImpl) UnHibernateActionFactory(hibernator *pincherv1alpha
 				Status:        "success",
 			}
 
+			patch := fmt.Sprintf(replicaPatch, replicaCount)
+
+			if inc.GetKind() == "HorizontalPodAutoscaler" {
+				patch = fmt.Sprintf(minReplicaPatch, replicaCount)
+			}
+
 			request := &pkg.PatchRequest{
 				Name:             inc.GetName(),
 				Namespace:        inc.GetNamespace(),
 				GroupVersionKind: inc.GroupVersionKind(),
-				Patch:            fmt.Sprintf(fullPatch, replicaCount, replicaAnnotation, "0"),
+				Patch:            patch,
 				PatchType:        string(types.JSONPatchType),
 			}
 			_, err = r.Kubectl.PatchResource(context.Background(), request)
 
 			if err != nil {
-				//log.Error(err, "action on object %s", requestObj)
 				impactedObject.Status = "error"
 				impactedObject.Message = err.Error()
 			}
@@ -187,4 +228,32 @@ func (r *ResourceActionImpl) UnHibernateActionFactory(hibernator *pincherv1alpha
 		}
 		return impactedObjects, excludedObjects
 	}
+}
+
+func (r *ResourceActionImpl) getOriginalReplicaCount(res unstructured.Unstructured /*, previousHibernatedObjects map[string]int*/) (int, error) {
+	to, err := res.MarshalJSON()
+	if err != nil {
+		return 0, err
+	}
+	annotations := gjson.Get(string(to), "metadata.annotations")
+	originalCount := annotations.Map()[replicaAnnotation].Str
+	replicaCount, err := strconv.Atoi(originalCount)
+	//if len(originalCount) == 0 || err != nil {
+	//	resourceKey := getResourceKey(res)
+	//	ok := false
+	//	if replicaCount, ok = previousHibernatedObjects[resourceKey]; !ok {
+	//		return 0, nil
+	//	}
+	//}
+	return replicaCount, err
+}
+
+func (r *ResourceActionImpl) hasReplicaAnnotation(res unstructured.Unstructured) bool {
+	to, err := res.MarshalJSON()
+	if err != nil {
+		return false
+	}
+	annotations := gjson.Get(string(to), "metadata.annotations")
+	originalCount := annotations.Map()[replicaAnnotation].Str
+	return len(originalCount) != 0
 }
