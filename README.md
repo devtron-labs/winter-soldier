@@ -108,7 +108,7 @@ spec:
 4. UnHiberbate - UnHibernates immediately till this flag is unset
 ```yaml
 spec:
-  unhibernate: true
+  unHibernate: true
 ```
 ** Please Note: If both hibernate and unHibernate flag are set then hibernate flag is ignored
 
