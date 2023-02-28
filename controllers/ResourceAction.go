@@ -83,6 +83,8 @@ func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibe
 	targetReplicaCount := 0
 	if hibernator.Spec.TargetReplicas != nil && len(*hibernator.Spec.TargetReplicas) > timeGap.MatchedIndex {
 		targetReplicaCount = (*hibernator.Spec.TargetReplicas)[timeGap.MatchedIndex]
+	} else if hibernator.Spec.TargetReplicas != nil && len(*hibernator.Spec.TargetReplicas) != 0 && len(*hibernator.Spec.TargetReplicas) <= timeGap.MatchedIndex {
+		targetReplicaCount = (*hibernator.Spec.TargetReplicas)[len(*hibernator.Spec.TargetReplicas)-1]
 	}
 	if hibernator.Spec.Action == pincherv1alpha1.Hibernate || hibernator.Spec.Action == pincherv1alpha1.Sleep {
 		targetReplicaCount = 0
