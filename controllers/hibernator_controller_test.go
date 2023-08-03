@@ -17,10 +17,15 @@ limitations under the License.
 package controllers
 
 import (
+	"encoding/json"
 	"github.com/devtron-labs/winter-soldier/api/v1alpha1"
 	"github.com/devtron-labs/winter-soldier/pkg"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"reflect"
+	controllerruntime "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
 	pincherv1alpha1 "github.com/devtron-labs/winter-soldier/api/v1alpha1"
@@ -140,6 +145,70 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 			got, _ := r.hibernate(&tt.args.hibernator, tt.args.timeGap)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("hibernate() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestHibernatorReconciler_process(t *testing.T) {
+	var hibernator pincherv1alpha1.Hibernator
+	err := json.Unmarshal([]byte(hibernator_mock_1), &hibernator)
+	if err != nil {
+		panic(err)
+	}
+	history := NewHistoryImpl()
+	timeUtil := NewTimeUtilImpl(history)
+	type fields struct {
+		Client           client.Client
+		Log              logr.Logger
+		Scheme           *runtime.Scheme
+		Kubectl          pkg.KubectlCmd
+		Mapper           *pkg.Mapper
+		HibernatorAction HibernatorAction
+		TimeUtil         TimeUtil
+	}
+	type args struct {
+		hibernator pincherv1alpha1.Hibernator
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    controllerruntime.Result
+		wantErr bool
+	}{
+		{
+			name: "previous day - current time outside",
+			fields: fields{
+				Client:           nil,
+				Log:              controllerruntime.Log.WithName("controllers").WithName("Hibernator"),
+				Scheme:           nil,
+				Kubectl:          pkg.NewKubectlMock(pkg.DeploymentObjectsMock),
+				Mapper:           nil,
+				HibernatorAction: nil,
+				TimeUtil:         timeUtil,
+			},
+			args: args{hibernator: hibernator},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &HibernatorReconciler{
+				Client:           tt.fields.Client,
+				Log:              tt.fields.Log,
+				Scheme:           tt.fields.Scheme,
+				Kubectl:          tt.fields.Kubectl,
+				Mapper:           tt.fields.Mapper,
+				HibernatorAction: tt.fields.HibernatorAction,
+				TimeUtil:         tt.fields.TimeUtil,
+			}
+			got, err := r.process(tt.args.hibernator)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("process() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("process() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

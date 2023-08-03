@@ -28,10 +28,16 @@ func TestTimeRangesWithZone_Contains(t1 *testing.T) {
 		WeekdayFrom: "Fri",
 		WeekdayTo:   "Sat",
 	}
+	tr2 := TimeRange{
+		TimeFrom:    "18:00",
+		TimeTo:      "20",
+		WeekdayFrom: "Fri",
+		WeekdayTo:   "Fri",
+	}
 	const layout = "Jan 2, 2006 at 3:04pm (IST)"
-	tm, _ := time.Parse(layout, "Mar 27, 2021 at 12:45pm (IST)")
-	tm2, _ := time.Parse(layout, "Mar 27, 2021 at 18:45pm (IST)")
-	tm3, _ := time.Parse(layout, "Mar 22, 2021 at 12:45pm (IST)")
+	tm, _ := time.Parse(layout, "Mar 27, 2021 at 12:45pm (IST)")  //Sat
+	tm2, _ := time.Parse(layout, "Mar 27, 2021 at 18:45pm (IST)") //Sat
+	tm3, _ := time.Parse(layout, "Mar 22, 2021 at 12:45pm (IST)") //Mon
 	type fields struct {
 		TimeRanges []TimeRange
 		TimeZone   string
@@ -73,6 +79,26 @@ func TestTimeRangesWithZone_Contains(t1 *testing.T) {
 				TimeZone:   "Asia/Kolkata",
 			},
 			args:    args{instant: tm3},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name: "negative case - previous day current time inside",
+			fields: fields{
+				TimeRanges: []TimeRange{tr2},
+				TimeZone:   "Asia/Kolkata",
+			},
+			args:    args{instant: tm2},
+			want:    false,
+			wantErr: false,
+		},
+		{
+			name: "negative case - previous day current time outside",
+			fields: fields{
+				TimeRanges: []TimeRange{tr2},
+				TimeZone:   "Asia/Kolkata",
+			},
+			args:    args{instant: tm},
 			want:    false,
 			wantErr: false,
 		},
@@ -138,18 +164,25 @@ func TestTimeRangesWithZone_NearestTimeGap(t1 *testing.T) {
 		WeekdayFrom: "Mon",
 		WeekdayTo:   "Sun",
 	}
-	tm, _ := time.Parse(time.RFC1123, "Sat, 27 Mar 2021 18:15:00 IST")
-	tm2, _ := time.Parse(time.RFC1123, "Sat, 27 Mar 2021 17:45:00 IST")
-	tm3, _ := time.Parse(time.RFC1123, "Mon, 22 Mar 2021 18:15:00 IST")
-	tm4, _ := time.Parse(time.RFC1123, "Sat, 27 Mar 2021 20:45:00 IST")
-	tm5, _ := time.Parse(time.RFC1123, "Thu, 25 Mar 2021 20:45:00 IST")
-	tm6, _ := time.Parse(time.RFC1123, "Thu, 25 Mar 2021 20:45:00 IST")
-	tm7, _ := time.Parse(time.RFC1123, "Tue, 23 Mar 2021 18:15:00 IST")
-	tm8, _ := time.Parse(time.RFC1123, "Sun, 28 Mar 2021 18:15:00 IST")
-	tm9, _ := time.Parse(time.RFC1123, "Sat, 14 Jan 2023 18:36:00 IST")
-	tm10, _ := time.Parse(time.RFC1123, "Sat, 14 Jan 2023 18:39:00 IST")
-	tm11, _ := time.Parse(time.RFC1123, "Sun, 15 Jan 2023 18:36:00 IST")
-	tm12, _ := time.Parse(time.RFC1123, "Sun, 15 Jan 2023 18:39:00 IST")
+	tr8 := TimeRange{
+		TimeFrom:    "18:38",
+		TimeTo:      "18:40:00",
+		WeekdayFrom: "Mon",
+		WeekdayTo:   "Mon",
+	}
+	tm, _ := time.Parse(time.RFC1123, "Sat, 27 Mar 2021 18:15:00 IST")   //Sat
+	tm2, _ := time.Parse(time.RFC1123, "Sat, 27 Mar 2021 17:45:00 IST")  //Sat
+	tm3, _ := time.Parse(time.RFC1123, "Mon, 22 Mar 2021 18:15:00 IST")  //Mon
+	tm4, _ := time.Parse(time.RFC1123, "Sat, 27 Mar 2021 20:45:00 IST")  //Sat
+	tm5, _ := time.Parse(time.RFC1123, "Thu, 25 Mar 2021 20:45:00 IST")  //Thu
+	tm6, _ := time.Parse(time.RFC1123, "Thu, 25 Mar 2021 20:45:00 IST")  //Thu
+	tm7, _ := time.Parse(time.RFC1123, "Tue, 23 Mar 2021 18:15:00 IST")  //Tue
+	tm8, _ := time.Parse(time.RFC1123, "Sun, 28 Mar 2021 18:15:00 IST")  //Sun
+	tm9, _ := time.Parse(time.RFC1123, "Sat, 14 Jan 2023 18:36:00 IST")  //Sat
+	tm10, _ := time.Parse(time.RFC1123, "Sat, 14 Jan 2023 18:39:00 IST") //Sat
+	tm11, _ := time.Parse(time.RFC1123, "Sun, 15 Jan 2023 18:36:00 IST") //Sun
+	tm12, _ := time.Parse(time.RFC1123, "Sun, 15 Jan 2023 18:39:00 IST") //Sun
+	tm13, _ := time.Parse(time.RFC1123, "Tue, 23 Mar 2021 18:39:00 IST") //Tue
 	type fields struct {
 		TimeRanges []TimeRange
 		TimeZone   string
@@ -332,6 +365,18 @@ func TestTimeRangesWithZone_NearestTimeGap(t1 *testing.T) {
 			timeGapInSeconds: 1 * 60,
 			matchedIndex:     1,
 			want1:            true,
+			wantErr:          false,
+		},
+		{
+			name: "previous date matching time check",
+			fields: fields{
+				TimeRanges: []TimeRange{tr8},
+				TimeZone:   "Asia/Kolkata",
+			},
+			args:             args{instant: tm13},
+			timeGapInSeconds: 518340,
+			matchedIndex:     -1,
+			want1:            false,
 			wantErr:          false,
 		},
 	}

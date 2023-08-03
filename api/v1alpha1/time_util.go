@@ -202,7 +202,7 @@ func (t *TimeRangesWithZone) normalizeTimeRange() ([]TimeRange, []int) {
 	var normalizedTimeRanges []TimeRange
 	var normalizedIndex []int
 	for index, tr := range t.TimeRanges {
-		if tr.WeekdayFrom.toOrdinal() < tr.WeekdayTo.toOrdinal() {
+		if tr.WeekdayFrom.toOrdinal() <= tr.WeekdayTo.toOrdinal() {
 			normalizedTimeRanges = append(normalizedTimeRanges, tr)
 			normalizedIndex = append(normalizedIndex, index)
 		} else {
