@@ -19,6 +19,7 @@ package controllers
 import (
 	pincherv1alpha1 "github.com/devtron-labs/winter-soldier/api/v1alpha1"
 	"github.com/devtron-labs/winter-soldier/pkg"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	//"sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
@@ -31,12 +32,13 @@ type HibernatorAction interface {
 	executeRules(hibernator *pincherv1alpha1.Hibernator, execute Execute, reSync bool) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject)
 }
 
-func NewHibernatorActionImpl(kubectl pkg.KubectlCmd, historyUtil History, resourceAction ResourceAction, resourceSelector ResourceSelector) HibernatorAction {
+func NewHibernatorActionImpl(kubectl pkg.KubectlCmd, historyUtil History, resourceAction ResourceAction, resourceSelector ResourceSelector, log logr.Logger) HibernatorAction {
 	return &HibernatorActionImpl{
 		Kubectl:          kubectl,
 		historyUtil:      historyUtil,
 		resourceAction:   resourceAction,
 		resourceSelector: resourceSelector,
+		log:              log,
 	}
 }
 
@@ -45,6 +47,7 @@ type HibernatorActionImpl struct {
 	historyUtil      History
 	resourceAction   ResourceAction
 	resourceSelector ResourceSelector
+	log              logr.Logger
 }
 
 func (r *HibernatorActionImpl) unHibernate(hibernator *pincherv1alpha1.Hibernator) (*pincherv1alpha1.Hibernator, bool) {
@@ -65,7 +68,6 @@ func (r *HibernatorActionImpl) unHibernate(hibernator *pincherv1alpha1.Hibernato
 		}
 		hibernator.Status.History = r.historyUtil.addToHistory(history, hibernator.Status.History, reSync)
 	}
-	//log.Info("ending unHibernate")
 
 	return hibernator, len(impactedObjects) > 0
 }
@@ -107,7 +109,8 @@ func (r *HibernatorActionImpl) hibernate(hibernator *pincherv1alpha1.Hibernator,
 		hibernator.Status.History = r.historyUtil.addToHistory(history, hibernator.Status.History, reSync)
 	}
 
-	//log.Info("ending hibernate")
+	r.log.Info("hibernate Operation - current run within range : next scheduled run at : Impacted Objects : excluded Objects", timeGap.WithinRange, timeGap.TimeGapInSeconds, impactedObjects, excludedObjects)
+
 	return hibernator, len(impactedObjects) > 0
 }
 
@@ -130,7 +133,7 @@ func (r *HibernatorActionImpl) delete(hibernator *pincherv1alpha1.Hibernator) (*
 		hibernator.Status.History = r.historyUtil.addToHistory(history, hibernator.Status.History, reSync)
 	}
 
-	//log.Info("ending delete")
+	r.log.Info("delete Operation - current run within range : next scheduled run at : Impacted Objects : excluded Objects", impactedObjects, excludedObjects)
 	return hibernator, len(impactedObjects) > 0
 }
 
@@ -158,7 +161,8 @@ func (r *HibernatorActionImpl) scale(hibernator *pincherv1alpha1.Hibernator, tim
 		hibernator.Status.History = r.historyUtil.addToHistory(history, hibernator.Status.History, reSync)
 	}
 
-	//log.Info("ending hibernate")
+	r.log.Info("Scale Operation - current run within range : next scheduled run at : Impacted Objects : excluded Objects", timeGap.WithinRange, timeGap.TimeGapInSeconds, impactedObjects, excludedObjects)
+
 	return hibernator, len(impactedObjects) > 0
 }
 

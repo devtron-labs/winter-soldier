@@ -73,7 +73,7 @@ func main() {
 	history := controllers.NewHistoryImpl()
 	resourceAction := controllers.NewResourceActionImpl(kubectl, history)
 	resourceSelector := controllers.NewResourceSelectorImpl(kubectl, mapper, pkg.NewFactory)
-	hibernatorAction := controllers.NewHibernatorActionImpl(kubectl, history, resourceAction, resourceSelector)
+	hibernatorAction := controllers.NewHibernatorActionImpl(kubectl, history, resourceAction, resourceSelector, log)
 	timeUtil := controllers.NewTimeUtilImpl(history)
 	if err = (&controllers.HibernatorReconciler{
 		Client:           mgr.GetClient(),
