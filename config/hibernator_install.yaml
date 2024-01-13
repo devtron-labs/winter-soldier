@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: winter-soldier
+    app.kubernetes.io/part-of: winter-soldier
+    app: winter-soldier
+  name: winter-soldier
+  namespace: devtroncd
+spec:
+  selector:
+    matchLabels:
+      app: winter-soldier
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: winter-soldier
+    spec:
+      containers:
+      - command:
+        - /manager
+        args:
+        - --enable-leader-election
+        image: quay.io/devtron/winter-soldier:3f10a62b-196-5753
+        name: manager
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+      terminationGracePeriodSeconds: 10
+      serviceAccount: winter-soldier
+      serviceAccountName: winter-soldier
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: winter-soldier
+    app.kubernetes.io/part-of: winter-soldier
+  name: winter-soldier
+  namespace: devtroncd
+rules:
+- apiGroups:
+  - pincher.devtron.ai
+  resources:
+  - hibernators
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - "*"
+  resources:
+  - "*"
+  verbs:
+  - get
+  - patch
+  - update
+  - create
+  - delete
+  - list
+  - watch
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: winter-soldier
+    app.kubernetes.io/part-of: winter-soldier
+  name: winter-soldier
+  namespace: devtroncd
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/name: winter-soldier
+    app.kubernetes.io/part-of: winter-soldier
+  name: winter-soldier
+  namespace: devtroncd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: winter-soldier
+subjects:
+- kind: ServiceAccount
+  name: winter-soldier
+  namespace: devtroncd
