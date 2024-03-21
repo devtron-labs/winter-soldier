@@ -129,6 +129,18 @@ func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibe
 				}
 			}
 
+			if inc.GetKind() == "Job" || inc.GetKind() == "CronJob" {
+				suspended := gjson.Get(string(to), "spec.suspend")
+
+				if suspended.Exists() && suspended.Bool() {
+					continue
+				} else if suspended.Exists() {
+					patch = fmt.Sprintf(suspendJobPatch, "replace")
+				} else {
+					patch = fmt.Sprintf(suspendJobPatch, "add")
+				}
+			}
+
 			impactedObject := pincherv1alpha1.ImpactedObject{
 				ResourceKey:   getResourceKey(inc),
 				OriginalCount: int(replicaCount.Int()),
@@ -210,6 +222,10 @@ func (r *ResourceActionImpl) ResetScaleActionFactory(hibernator *pincherv1alpha1
 
 			if inc.GetKind() == "HorizontalPodAutoscaler" {
 				patch = fmt.Sprintf(minReplicaPatch, replicaCount)
+			}
+
+			if inc.GetKind() == "Job" || inc.GetKind() == "CronJob" {
+				patch = resumeJobPatch
 			}
 
 			request := &pkg.PatchRequest{
