@@ -109,7 +109,7 @@ func (r *HibernatorActionImpl) hibernate(hibernator *pincherv1alpha1.Hibernator,
 		hibernator.Status.History = r.historyUtil.addToHistory(history, hibernator.Status.History, reSync)
 	}
 
-	r.log.Info("hibernate Operation - current run within range : next scheduled run at : Impacted Objects : excluded Objects", timeGap.WithinRange, timeGap.TimeGapInSeconds, impactedObjects, excludedObjects)
+	r.log.Info("hibernate Operation - current run within range : next scheduled run at : Impacted Objects : excluded Objects", "withinRange", timeGap.WithinRange, "timeGap", timeGap.TimeGapInSeconds, "impactedObject", impactedObjects, "excludedObject", excludedObjects)
 
 	return hibernator, len(impactedObjects) > 0
 }
@@ -133,7 +133,7 @@ func (r *HibernatorActionImpl) delete(hibernator *pincherv1alpha1.Hibernator) (*
 		hibernator.Status.History = r.historyUtil.addToHistory(history, hibernator.Status.History, reSync)
 	}
 
-	r.log.Info("delete Operation - current run within range : next scheduled run at : Impacted Objects : excluded Objects", impactedObjects, excludedObjects)
+	r.log.Info("delete Operation - current run within range : next scheduled run at : Impacted Objects : excluded Objects", "impactedObjects", impactedObjects, "excludedObjects", excludedObjects)
 	return hibernator, len(impactedObjects) > 0
 }
 
@@ -161,7 +161,7 @@ func (r *HibernatorActionImpl) scale(hibernator *pincherv1alpha1.Hibernator, tim
 		hibernator.Status.History = r.historyUtil.addToHistory(history, hibernator.Status.History, reSync)
 	}
 
-	r.log.Info("Scale Operation - current run within range : next scheduled run at : Impacted Objects : excluded Objects", timeGap.WithinRange, timeGap.TimeGapInSeconds, impactedObjects, excludedObjects)
+	r.log.Info("Scale Operation - current run within range : next scheduled run at : Impacted Objects : excluded Objects", "withinRange", timeGap.WithinRange, "timeGap", timeGap.TimeGapInSeconds, "impactedObjects", impactedObjects, "excludedObjects", excludedObjects)
 
 	return hibernator, len(impactedObjects) > 0
 }
