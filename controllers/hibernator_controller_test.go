@@ -108,6 +108,7 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 		historyUtil      History
 		resourceAction   ResourceAction
 		resourceSelector ResourceSelector
+		log              logr.Logger
 	}
 	type args struct {
 		hibernator v1alpha1.Hibernator
@@ -141,7 +142,7 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := NewHibernatorActionImpl(tt.fields.kubectl, tt.fields.historyUtil, tt.fields.resourceAction, tt.fields.resourceSelector)
+			r := NewHibernatorActionImpl(tt.fields.kubectl, tt.fields.historyUtil, tt.fields.resourceAction, tt.fields.resourceSelector, tt.fields.log)
 			got, _ := r.hibernate(&tt.args.hibernator, tt.args.timeGap)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("hibernate() got = %v, want %v", got, tt.want)
