@@ -125,6 +125,7 @@ func TestHibernatorReconciler_hibernate(t *testing.T) {
 			fields: fields{
 				kubectl:     pkg.NewKubectl(),
 				historyUtil: &HistoryImpl{},
+				log:         controllerruntime.Log.WithName("controllers").WithName("Hibernator"),
 			},
 			args: args{
 				hibernator: hibernator,
