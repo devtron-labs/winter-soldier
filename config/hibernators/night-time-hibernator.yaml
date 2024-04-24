@@ -1,0 +1,28 @@
+apiVersion: pincher.devtron.ai/v1alpha1
+kind: Hibernator
+metadata:
+  name: night-time-hibernator
+spec:
+  timeRangesWithZone:
+    timeZone: "Asia/Kolkata"
+    timeRanges:
+    - timeFrom: 00:00
+      timeTo: 07:59:59
+      weekdayFrom: Mon
+      weekdayTo: Fri
+  selectors:
+  - inclusions:
+    - objectSelector:
+        name: ""
+        type: "rollout,deploy,service"
+        fieldSelector:
+          - AfterTime(Now(), AddTime(ParseTime({{metadata.creationTimestamp}}, '2006-01-02T15:04:05Z'), '4d'))
+      namespaceSelector:
+        name: "all"
+  - exclusions:
+    - objectSelector:
+        name: ""
+        type: "ro,deployment"
+      namespaceSelector:
+        name: "kube-system,argo,devtroncd"
+  action: sleep
