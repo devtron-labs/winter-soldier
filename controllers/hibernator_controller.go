@@ -36,6 +36,8 @@ const (
 	replicaAnnotation            = `hibernator.devtron.ai/replicas`
 	minReplicaPatch              = `[{"op": "replace", "path": "/spec/minReplicas", "value":%d}]`
 	minReplicaAndAnnotationPatch = `[{"op": "replace", "path": "/spec/minReplicas", "value":%d}, {"op": "add", "path": "/metadata/annotations", "value": {"%s":"%s"}}]`
+	suspendJobPatch              = `[{"op": "%s", "path": "/spec/suspend", "value":true}]`
+	resumeJobPatch               = `[{"op": "remove", "path": "/spec/suspend"}]`
 )
 
 // HibernatorReconciler reconciles a Hibernator object
