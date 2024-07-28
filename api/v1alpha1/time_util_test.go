@@ -170,7 +170,25 @@ func TestTimeRangesWithZone_NearestTimeGap(t1 *testing.T) {
 		WeekdayFrom: "Mon",
 		WeekdayTo:   "Mon",
 	}
-	tm, _ := time.Parse(time.RFC1123, "Sat, 27 Mar 2021 18:15:00 IST")   //Sat
+	tr9 := TimeRange{
+		TimeFrom:    "18:00",
+		TimeTo:      "23:59",
+		WeekdayFrom: "Mon",
+		WeekdayTo:   "Sun",
+	}
+	tr10 := TimeRange{
+		TimeFrom:    "00:00",
+		TimeTo:      "03:59",
+		WeekdayFrom: "Mon",
+		WeekdayTo:   "Sun",
+	}
+	tr11 := TimeRange{
+		TimeFrom:    "04:00",
+		TimeTo:      "17:59",
+		WeekdayFrom: "Mon",
+		WeekdayTo:   "Sun",
+	}
+	tm, _ := time.Parse(time.RFC1123, "Sat, 27 Mar 2021 13:15:00 IST")   //Sat
 	tm2, _ := time.Parse(time.RFC1123, "Sat, 27 Mar 2021 17:45:00 IST")  //Sat
 	tm3, _ := time.Parse(time.RFC1123, "Mon, 22 Mar 2021 18:15:00 IST")  //Mon
 	tm4, _ := time.Parse(time.RFC1123, "Sat, 27 Mar 2021 20:45:00 IST")  //Sat
@@ -183,6 +201,7 @@ func TestTimeRangesWithZone_NearestTimeGap(t1 *testing.T) {
 	tm11, _ := time.Parse(time.RFC1123, "Sun, 15 Jan 2023 18:36:00 IST") //Sun
 	tm12, _ := time.Parse(time.RFC1123, "Sun, 15 Jan 2023 18:39:00 IST") //Sun
 	tm13, _ := time.Parse(time.RFC1123, "Tue, 23 Mar 2021 18:39:00 IST") //Tue
+	tm14, _ := time.Parse(time.RFC1123, "Tue, 23 Mar 2021 22:30:00 IST") //Tue
 	type fields struct {
 		TimeRanges []TimeRange
 		TimeZone   string
@@ -208,6 +227,30 @@ func TestTimeRangesWithZone_NearestTimeGap(t1 *testing.T) {
 			args:             args{instant: tm},
 			timeGapInSeconds: 105 * 60,
 			matchedIndex:     0,
+			want1:            true,
+			wantErr:          false,
+		},
+		{
+			name: "inRange",
+			fields: fields{
+				TimeRanges: []TimeRange{tr2, tr3, tr1},
+				TimeZone:   "Asia/Kolkata",
+			},
+			args:             args{instant: tm},
+			timeGapInSeconds: 105 * 60,
+			matchedIndex:     2,
+			want1:            true,
+			wantErr:          false,
+		},
+		{
+			name: "inRange",
+			fields: fields{
+				TimeRanges: []TimeRange{tr9, tr10, tr11},
+				TimeZone:   "Asia/Kolkata",
+			},
+			args:             args{instant: tm14},
+			timeGapInSeconds: 839 * 60,
+			matchedIndex:     2,
 			want1:            true,
 			wantErr:          false,
 		},

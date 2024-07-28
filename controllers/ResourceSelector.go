@@ -48,38 +48,6 @@ type ResourceSelectorImpl struct {
 	factory func(mapper *pkg.Mapper) pkg.ArgsProcessor
 }
 
-func (r *ResourceSelectorImpl) handleLabelSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
-	factory := r.factory(r.Mapper)
-	types := strings.Split(rule.ObjectSelector.Type, ",")
-	namespaces, err := r.getNamespaces(rule, factory)
-	if err != nil {
-		return nil, err
-	}
-	var manifests []unstructured.Unstructured
-	for _, t := range types {
-		resourceMapping, err := factory.MappingFor(t)
-		if err != nil {
-			return nil, err
-		}
-		for _, namespace := range namespaces {
-			request := &pkg.ListRequest{
-				Namespace:            namespace,
-				GroupVersionResource: resourceMapping.Resource,
-				ListOptions: metav1.ListOptions{
-					LabelSelector: strings.Join(rule.ObjectSelector.Labels, ","),
-				},
-			}
-			resp, err := r.Kubectl.ListResources(context.Background(), request)
-			if err != nil {
-				continue
-			}
-			manifests = append(manifests, resp.Manifests...)
-		}
-	}
-
-	return manifests, nil
-}
-
 func (r *ResourceSelectorImpl) handleFieldSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
 	var resp []unstructured.Unstructured
 	var err error
@@ -111,27 +79,63 @@ func (r *ResourceSelectorImpl) handleFieldSelector(rule pincherv1alpha1.Selector
 	return matchedObjects, nil
 }
 
-func (r *ResourceSelectorImpl) handleSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
+func (r *ResourceSelectorImpl) handleLabelSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
 	factory := r.factory(r.Mapper)
 	types := strings.Split(rule.ObjectSelector.Type, ",")
 	namespaces, err := r.getNamespaces(rule, factory)
 	if err != nil {
 		return nil, err
 	}
+	var apiResources []pkg.APIResourceInfo
+	isNamespaced := len(namespaces) != 0
+	apiResources, err = r.getResources(types, isNamespaced, factory)
+	if err != nil {
+		return nil, err
+	}
+	var manifests []unstructured.Unstructured
+	for _, t := range apiResources {
+		for _, namespace := range namespaces {
+			request := &pkg.ListRequest{
+				Namespace:            namespace,
+				GroupVersionResource: t.GroupVersionResource,
+				ListOptions: metav1.ListOptions{
+					LabelSelector: strings.Join(rule.ObjectSelector.Labels, ","),
+				},
+			}
+			resp, err := r.Kubectl.ListResources(context.Background(), request)
+			if err != nil {
+				continue
+			}
+			manifests = append(manifests, resp.Manifests...)
+		}
+	}
+
+	return manifests, nil
+}
+
+func (r *ResourceSelectorImpl) handleSelector(rule pincherv1alpha1.Selector) ([]unstructured.Unstructured, error) {
+	factory := r.factory(r.Mapper)
+	namespaces, err := r.getNamespaces(rule, factory)
+	if err != nil {
+		return nil, err
+	}
+	var apiResources []pkg.APIResourceInfo
+	isNamespaced := len(namespaces) != 0
+	types := strings.Split(rule.ObjectSelector.Type, ",")
+	apiResources, err = r.getResources(types, isNamespaced, factory)
+	if err != nil {
+		return nil, err
+	}
 	if len(rule.ObjectSelector.Name) > 0 {
 		names := strings.Split(rule.ObjectSelector.Name, ",")
 		var manifests []unstructured.Unstructured
-		for _, t := range types {
-			resourceMapping, err := factory.MappingFor(t)
-			if err != nil {
-				return nil, err
-			}
+		for _, t := range apiResources {
 			for _, namespace := range namespaces {
 				for _, name := range names {
 					request := &pkg.GetRequest{
 						Name:             name,
 						Namespace:        namespace,
-						GroupVersionKind: resourceMapping.GroupVersionKind,
+						GroupVersionKind: t.GroupVersionKind,
 					}
 					resp, err := r.Kubectl.GetResource(context.Background(), request)
 					if err != nil {
@@ -144,15 +148,11 @@ func (r *ResourceSelectorImpl) handleSelector(rule pincherv1alpha1.Selector) ([]
 		return manifests, nil
 	} else {
 		var manifests []unstructured.Unstructured
-		for _, t := range types {
-			resourceMapping, err := factory.MappingFor(t)
-			if err != nil {
-				return nil, err
-			}
+		for _, t := range apiResources {
 			for _, namespace := range namespaces {
 				request := &pkg.ListRequest{
 					Namespace:            namespace,
-					GroupVersionResource: resourceMapping.Resource,
+					GroupVersionResource: t.GroupVersionResource,
 					ListOptions:          metav1.ListOptions{},
 				}
 				resp, err := r.Kubectl.ListResources(context.Background(), request)
@@ -164,6 +164,31 @@ func (r *ResourceSelectorImpl) handleSelector(rule pincherv1alpha1.Selector) ([]
 		}
 		return manifests, nil
 	}
+}
+
+func (r *ResourceSelectorImpl) getResources(types []string, isNamespaced bool, factory pkg.ArgsProcessor) ([]pkg.APIResourceInfo, error) {
+	var apiResources []pkg.APIResourceInfo
+	var err error
+	if len(types) == 1 && types[0] == "all" {
+		apiResources, err = pkg.GetAllAPIResources(isNamespaced)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		for _, t := range types {
+			resourceMapping, err := factory.MappingFor(t)
+			if err != nil {
+				continue
+			}
+			apiResourceInfo := pkg.APIResourceInfo{
+				GroupVersionKind:     resourceMapping.GroupVersionKind,
+				Meta:                 metav1.APIResource{},
+				GroupVersionResource: resourceMapping.Resource,
+			}
+			apiResources = append(apiResources, apiResourceInfo)
+		}
+	}
+	return apiResources, nil
 }
 
 func (r *ResourceSelectorImpl) getNamespaces(rule pincherv1alpha1.Selector, factory pkg.ArgsProcessor) ([]string, error) {
