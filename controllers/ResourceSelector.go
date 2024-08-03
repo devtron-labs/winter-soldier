@@ -20,6 +20,7 @@ import (
 	"context"
 	pincherv1alpha1 "github.com/devtron-labs/winter-soldier/api/v1alpha1"
 	"github.com/devtron-labs/winter-soldier/pkg"
+	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"strings"
@@ -34,15 +35,17 @@ type ResourceSelector interface {
 	getIncludedExcludedObjects(inclusions, exclusions []unstructured.Unstructured) (included []unstructured.Unstructured, excluded []unstructured.Unstructured)
 }
 
-func NewResourceSelectorImpl(Kubectl pkg.KubectlCmd, Mapper *pkg.Mapper, factory func(mapper *pkg.Mapper) pkg.ArgsProcessor) ResourceSelector {
+func NewResourceSelectorImpl(Kubectl pkg.KubectlCmd, Mapper *pkg.Mapper, factory func(mapper *pkg.Mapper) pkg.ArgsProcessor, log logr.Logger) ResourceSelector {
 	return &ResourceSelectorImpl{
 		Kubectl: Kubectl,
 		Mapper:  Mapper,
 		factory: factory,
+		Log:     log,
 	}
 }
 
 type ResourceSelectorImpl struct {
+	Log     logr.Logger
 	Kubectl pkg.KubectlCmd
 	Mapper  *pkg.Mapper
 	factory func(mapper *pkg.Mapper) pkg.ArgsProcessor
@@ -59,7 +62,8 @@ func (r *ResourceSelectorImpl) handleLabelSelector(rule pincherv1alpha1.Selector
 	for _, t := range types {
 		resourceMapping, err := factory.MappingFor(t)
 		if err != nil {
-			return nil, err
+			r.Log.Error(err, "failed to find resource mapping, skipping!!", "type", t)
+			continue
 		}
 		for _, namespace := range namespaces {
 			request := &pkg.ListRequest{
@@ -124,7 +128,8 @@ func (r *ResourceSelectorImpl) handleSelector(rule pincherv1alpha1.Selector) ([]
 		for _, t := range types {
 			resourceMapping, err := factory.MappingFor(t)
 			if err != nil {
-				return nil, err
+				r.Log.Error(err, "failed to find resource mapping, skipping!!", "type", t)
+				continue
 			}
 			for _, namespace := range namespaces {
 				for _, name := range names {
@@ -147,7 +152,8 @@ func (r *ResourceSelectorImpl) handleSelector(rule pincherv1alpha1.Selector) ([]
 		for _, t := range types {
 			resourceMapping, err := factory.MappingFor(t)
 			if err != nil {
-				return nil, err
+				r.Log.Error(err, "failed to find resource mapping, skipping!!", "type", t)
+				continue
 			}
 			for _, namespace := range namespaces {
 				request := &pkg.ListRequest{

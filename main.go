@@ -72,7 +72,7 @@ func main() {
 	mapper := pkg.NewMapperFactory()
 	history := controllers.NewHistoryImpl()
 	resourceAction := controllers.NewResourceActionImpl(kubectl, history)
-	resourceSelector := controllers.NewResourceSelectorImpl(kubectl, mapper, pkg.NewFactory)
+	resourceSelector := controllers.NewResourceSelectorImpl(kubectl, mapper, pkg.NewFactory, log)
 	hibernatorAction := controllers.NewHibernatorActionImpl(kubectl, history, resourceAction, resourceSelector, log)
 	timeUtil := controllers.NewTimeUtilImpl(history)
 	if err = (&controllers.HibernatorReconciler{

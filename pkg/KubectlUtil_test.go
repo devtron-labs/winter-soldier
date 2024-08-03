@@ -49,7 +49,7 @@ func TestArgsProcessor_ResourceTypeOrNameArgs(t *testing.T) {
 			a := NewFactory(tt.fields.mapper)
 			resource, err := a.MappingFor(tt.args.args[0])
 			if err != nil {
-				fmt.Println(err)
+				fmt.Println("error occurred", err)
 			}
 			fmt.Println(resource)
 			//a.ResourceTypeOrNameArgs(tt.args.args...)

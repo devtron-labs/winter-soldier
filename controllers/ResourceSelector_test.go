@@ -20,7 +20,9 @@ import (
 	"fmt"
 	"github.com/devtron-labs/winter-soldier/api/v1alpha1"
 	"github.com/devtron-labs/winter-soldier/pkg"
+	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"testing"
 )
 
@@ -40,6 +42,7 @@ func TestHibernatorReconciler_handleLabelSelector(t *testing.T) {
 		kubectl pkg.KubectlCmd
 		mapper  *pkg.Mapper
 		factory func(mapper *pkg.Mapper) pkg.ArgsProcessor
+		Log     logr.Logger
 	}
 	type args struct {
 		rule v1alpha1.Selector
@@ -57,6 +60,7 @@ func TestHibernatorReconciler_handleLabelSelector(t *testing.T) {
 				kubectl: pkg.NewKubectlMock(pkg.DeploymentObjectsMock),
 				mapper:  pkg.NewMockMapperFactory(),
 				factory: pkg.NewMockFactory,
+				Log:     ctrl.Log.WithName("test").WithName("Hibernator"),
 			},
 			args: args{rule: rule},
 			want: []*unstructured.Unstructured{
@@ -70,6 +74,7 @@ func TestHibernatorReconciler_handleLabelSelector(t *testing.T) {
 				Kubectl: tt.fields.kubectl,
 				Mapper:  tt.fields.mapper,
 				factory: tt.fields.factory,
+				Log:     tt.fields.Log,
 			}
 			got, err := r.handleLabelSelector(tt.args.rule)
 			fmt.Println(got)
