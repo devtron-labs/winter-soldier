@@ -18,14 +18,18 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	pincherv1alpha1 "github.com/devtron-labs/winter-soldier/api/v1alpha1"
 	"github.com/devtron-labs/winter-soldier/pkg"
 	"github.com/tidwall/gjson"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/pointer"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -34,6 +38,7 @@ type Execute func(included []unstructured.Unstructured) ([]pincherv1alpha1.Impac
 type ResourceAction interface {
 	DeleteAction(included []unstructured.Unstructured) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject)
 	ScaleActionFactory(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) Execute
+	ScaleResourceActionFactory(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) Execute
 	ResetScaleActionFactory(hibernator *pincherv1alpha1.Hibernator) Execute
 }
 
@@ -258,4 +263,90 @@ func (r *ResourceActionImpl) hasReplicaAnnotation(res unstructured.Unstructured)
 	annotations := gjson.Get(string(to), "metadata.annotations")
 	originalCount := annotations.Map()[replicaAnnotation].Str
 	return len(originalCount) != 0
+}
+
+func (r *ResourceActionImpl) ScaleResourceActionFactory(hibernator *pincherv1alpha1.Hibernator, timeGap pincherv1alpha1.NearestTimeGap) Execute {
+	fmt.Printf("entering ScaleResourceActionFactory %s \n", time.Now().Format(time.RFC1123Z))
+	var resourceRequirements map[string]v1.ResourceRequirements
+	if hibernator.Spec.TargetResources != nil && len(*hibernator.Spec.TargetResources) > timeGap.MatchedIndex {
+		resourceRequirements = (*hibernator.Spec.TargetResources)[timeGap.MatchedIndex]
+	} else if len(*hibernator.Spec.TargetResources) != 0 && len(*hibernator.Spec.TargetReplicas) <= timeGap.MatchedIndex {
+		resourceRequirements = (*hibernator.Spec.TargetResources)[len(*hibernator.Spec.TargetResources)-1]
+	}
+
+	return func(included []unstructured.Unstructured) ([]pincherv1alpha1.ImpactedObject, []pincherv1alpha1.ExcludedObject) {
+
+		impactedObjects := make([]pincherv1alpha1.ImpactedObject, 0)
+		excludedObjects := make([]pincherv1alpha1.ExcludedObject, 0)
+
+		if resourceRequirements == nil {
+			return impactedObjects, excludedObjects
+		}
+		resourceRequirementsAsSpec := make([]map[string]interface{}, 0)
+		for k, v := range resourceRequirements {
+			resourceRequirementsAsSpec = append(resourceRequirementsAsSpec, map[string]interface{}{"name": k, "resources": v})
+		}
+		var err error
+
+		for _, inc := range included {
+			if !strings.EqualFold(inc.GetKind(), "Pod") {
+				continue
+			}
+			var pod v1.Pod
+			err = runtime.DefaultUnstructuredConverter.FromUnstructured(inc.UnstructuredContent(), &pod)
+			if err != nil {
+				continue
+			}
+			needUpdate := false
+			for _, container := range pod.Spec.Containers {
+				rr, ok := resourceRequirements[container.Name]
+				if !ok {
+					continue
+				}
+				cpuRequestEqual := container.Resources.Requests.Cpu().Cmp(*rr.Requests.Cpu()) == 0
+				memoryRequestEqual := container.Resources.Requests.Memory().Cmp(*rr.Requests.Memory()) == 0
+				cpuLimitEqual := container.Resources.Limits.Cpu().Cmp(*rr.Limits.Cpu()) == 0
+				memoryLimitEqual := container.Resources.Limits.Memory().Cmp(*rr.Limits.Memory()) == 0
+				allEqual := cpuRequestEqual && memoryRequestEqual && cpuLimitEqual && memoryLimitEqual
+				if allEqual {
+					continue
+				}
+				needUpdate = true
+			}
+			if !needUpdate {
+				continue
+			}
+			resourcePatch := map[string]map[string][]map[string]interface{}{"spec": {"containers": resourceRequirementsAsSpec}}
+
+			patch := ""
+			if requirements, err := json.Marshal(resourcePatch); err == nil {
+				patch = string(requirements)
+			}
+			if len(patch) == 0 {
+				continue
+			}
+
+			impactedObject := pincherv1alpha1.ImpactedObject{
+				ResourceKey: getResourceKey(inc),
+				Status:      "success",
+			}
+
+			request := &pkg.PatchRequest{
+				Name:             inc.GetName(),
+				Namespace:        inc.GetNamespace(),
+				GroupVersionKind: inc.GroupVersionKind(),
+				Patch:            patch,
+				PatchType:        string(types.StrategicMergePatchType),
+			}
+			_, err = r.Kubectl.PatchResource(context.Background(), request)
+
+			if err != nil {
+				impactedObject.Status = "error"
+				impactedObject.Message = err.Error()
+			}
+
+			impactedObjects = append(impactedObjects, impactedObject)
+		}
+		return impactedObjects, excludedObjects
+	}
 }
