@@ -270,7 +270,7 @@ func (r *ResourceActionImpl) ScaleResourceActionFactory(hibernator *pincherv1alp
 	var resourceRequirements map[string]v1.ResourceRequirements
 	if hibernator.Spec.TargetResources != nil && len(*hibernator.Spec.TargetResources) > timeGap.MatchedIndex {
 		resourceRequirements = (*hibernator.Spec.TargetResources)[timeGap.MatchedIndex]
-	} else if len(*hibernator.Spec.TargetResources) != 0 && len(*hibernator.Spec.TargetReplicas) <= timeGap.MatchedIndex {
+	} else if len(*hibernator.Spec.TargetResources) != 0 && len(*hibernator.Spec.TargetResources) <= timeGap.MatchedIndex {
 		resourceRequirements = (*hibernator.Spec.TargetResources)[len(*hibernator.Spec.TargetResources)-1]
 	}
 
