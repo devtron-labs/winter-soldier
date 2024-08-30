@@ -19,6 +19,7 @@ package pkg
 import (
 	"fmt"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	memory "k8s.io/client-go/discovery/cached"
@@ -42,6 +43,12 @@ type ResourceProcessor struct {
 type resourceTuple struct {
 	Resource string
 	Name     string
+}
+
+type APIResourceInfo struct {
+	GroupVersionKind     schema.GroupVersionKind
+	Meta                 metav1.APIResource
+	GroupVersionResource schema.GroupVersionResource
 }
 
 func NewMapperFactory() *Mapper {
@@ -69,6 +76,48 @@ func NewFactory(mapper *Mapper) ArgsProcessor {
 	return &ResourceProcessor{
 		mapper: mapper,
 	}
+}
+
+func GetAllAPIResources(isNamespaced bool) ([]APIResourceInfo, error) {
+	restConfig := ctrl.GetConfigOrDie()
+	disco, err := discovery.NewDiscoveryClientForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	serverResources, err := disco.ServerPreferredResources()
+	if err != nil {
+		if len(serverResources) == 0 {
+			return nil, err
+		}
+	}
+	apiResIfs := make([]APIResourceInfo, 0)
+	for _, apiResourcesList := range serverResources {
+		for _, apiResource := range apiResourcesList.APIResources {
+
+			if apiResource.Namespaced != isNamespaced {
+				continue
+			}
+			resource := ToGroupVersionResource(apiResourcesList.GroupVersion, &apiResource)
+			gv, err := schema.ParseGroupVersion(apiResourcesList.GroupVersion)
+			if err != nil {
+				return nil, err
+			}
+			apiResIf := APIResourceInfo{
+				GroupVersionKind:     schema.GroupVersionKind{Group: gv.Group, Version: gv.Version, Kind: apiResource.Kind},
+				Meta:                 apiResource,
+				GroupVersionResource: resource,
+			}
+			apiResIfs = append(apiResIfs, apiResIf)
+		}
+	}
+	return apiResIfs, nil
+}
+
+func ToGroupVersionResource(groupVersion string, apiResource *metav1.APIResource) schema.GroupVersionResource {
+	gvk := schema.FromAPIVersionAndKind(groupVersion, apiResource.Kind)
+	gv := gvk.GroupVersion()
+	return gv.WithResource(apiResource.Name)
 }
 
 //func (a *ResourceProcessor) ResourceTuples() []resourceTuple {
