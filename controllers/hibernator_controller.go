@@ -114,7 +114,7 @@ func (r *HibernatorReconciler) process(hibernator pincherv1alpha1.Hibernator) (c
 		finalHibernator, updated = r.HibernatorAction.delete(&hibernator)
 	} else if hibernator.Spec.Action == pincherv1alpha1.Hibernate || hibernator.Spec.Action == pincherv1alpha1.Sleep {
 		finalHibernator, updated = r.HibernatorAction.hibernate(&hibernator, nearestTimeGap)
-	} else if hibernator.Spec.Action == pincherv1alpha1.Scale {
+	} else if hibernator.Spec.Action == pincherv1alpha1.Scale || hibernator.Spec.Action == pincherv1alpha1.ScaleResource {
 		finalHibernator, updated = r.HibernatorAction.scale(&hibernator, nearestTimeGap)
 	} else {
 		log.Info("didnt hibernate or unHibernate -", "action", nearestTimeGap.WithinRange, "timegap", nearestTimeGap.TimeGapInSeconds, "isHibernating", hibernator.Status.IsHibernating)

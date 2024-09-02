@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -27,17 +28,18 @@ import (
 type HibernatorSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	When                 TimeRangesWithZone `json:"timeRangesWithZone,omitempty"`
-	Selectors            []Rule             `json:"selectors"`
-	Hibernate            bool               `json:"hibernate,omitempty"`
-	UnHibernate          bool               `json:"unHibernate,omitempty"`
-	ReSyncInterval       int                `json:"reSyncInterval,omitempty"`
-	Pause                bool               `json:"pause,omitempty"`
-	PauseUntil           DateTimeWithZone   `json:"pauseUntil,omitempty"`
-	RevisionHistoryLimit *int               `json:"revisionHistoryLimit,omitempty"`
-	Action               Action             `json:"action"`
-	DeleteStore          bool               `json:"deleteStore,omitempty"`
-	TargetReplicas       *[]int             `json:"targetReplicas,omitempty"`
+	When                 TimeRangesWithZone                    `json:"timeRangesWithZone,omitempty"`
+	Selectors            []Rule                                `json:"selectors"`
+	Hibernate            bool                                  `json:"hibernate,omitempty"`
+	UnHibernate          bool                                  `json:"unHibernate,omitempty"`
+	ReSyncInterval       int                                   `json:"reSyncInterval,omitempty"`
+	Pause                bool                                  `json:"pause,omitempty"`
+	PauseUntil           DateTimeWithZone                      `json:"pauseUntil,omitempty"`
+	RevisionHistoryLimit *int                                  `json:"revisionHistoryLimit,omitempty"`
+	Action               Action                                `json:"action"`
+	DeleteStore          bool                                  `json:"deleteStore,omitempty"`
+	TargetReplicas       *[]int                                `json:"targetReplicas,omitempty"`
+	TargetResources      *[]map[string]v1.ResourceRequirements `json:"targetResources,omitempty"`
 }
 
 type Rule struct {
@@ -149,11 +151,12 @@ type HibernatorList struct {
 type Action string
 
 const (
-	Delete      Action = "delete"
-	Hibernate   Action = "hibernate"
-	UnHibernate Action = "unhibernate"
-	Scale       Action = "scale"
-	Sleep       Action = "sleep" // for legacy reason; sleep is same as hibernate
+	Delete        Action = "delete"
+	Hibernate     Action = "hibernate"
+	UnHibernate   Action = "unhibernate"
+	Scale         Action = "scale"
+	Sleep         Action = "sleep" // for legacy reason; sleep is same as hibernate
+	ScaleResource Action = "scaleResource"
 )
 
 type Weekday string

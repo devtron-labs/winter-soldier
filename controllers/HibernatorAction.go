@@ -141,13 +141,17 @@ func (r *HibernatorActionImpl) scale(hibernator *pincherv1alpha1.Hibernator, tim
 
 	reSync := hibernator.Spec.Action == hibernator.Status.Action
 
-	hibernator.Status.Action = pincherv1alpha1.Scale
-
 	impactedObjects, excludedObjects := make([]pincherv1alpha1.ImpactedObject, 0), make([]pincherv1alpha1.ExcludedObject, 0)
 	if timeGap.WithinRange {
-		impactedObjects, excludedObjects = r.executeRules(hibernator, r.resourceAction.ScaleActionFactory(hibernator, timeGap), reSync)
+		if hibernator.Spec.Action == pincherv1alpha1.Scale {
+			impactedObjects, excludedObjects = r.executeRules(hibernator, r.resourceAction.ScaleActionFactory(hibernator, timeGap), reSync)
+		} else if hibernator.Spec.Action == pincherv1alpha1.ScaleResource {
+			impactedObjects, excludedObjects = r.executeRules(hibernator, r.resourceAction.ScaleResourceActionFactory(hibernator, timeGap), reSync)
+		}
 	} else {
-		impactedObjects, excludedObjects = r.executeRules(hibernator, r.resourceAction.ResetScaleActionFactory(hibernator), reSync)
+		if hibernator.Spec.Action == pincherv1alpha1.Scale {
+			impactedObjects, excludedObjects = r.executeRules(hibernator, r.resourceAction.ResetScaleActionFactory(hibernator), reSync)
+		}
 	}
 
 	if len(impactedObjects) > 0 {
