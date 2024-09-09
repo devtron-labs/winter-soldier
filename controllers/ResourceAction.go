@@ -105,17 +105,7 @@ func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibe
 
 			replicaCount := gjson.Get(string(to), "spec.replicas")
 
-			if int(replicaCount.Int()) == targetReplicaCount {
-				continue
-			}
-
 			patch := fmt.Sprintf(replicaPatch, targetReplicaCount)
-			if !r.hasReplicaAnnotation(inc) {
-				fmt.Println("annotation missing in ScaleActionFactory")
-				patch = fmt.Sprintf(replicaAndAnnotationPatch, targetReplicaCount, replicaAnnotation, replicaCount.Raw)
-			} else {
-				fmt.Println("annotation found in ScaleActionFactory")
-			}
 
 			if inc.GetKind() == "HorizontalPodAutoscaler" {
 				replicaCount = gjson.Get(string(to), "spec.minReplicas")
@@ -127,6 +117,28 @@ func (r *ResourceActionImpl) ScaleActionFactory(hibernator *pincherv1alpha1.Hibe
 				if !r.hasReplicaAnnotation(inc) {
 					patch = fmt.Sprintf(minReplicaAndAnnotationPatch, targetReplicaCount, replicaAnnotation, replicaCount.Raw)
 				}
+			} else if inc.GetKind() == "Job" || inc.GetKind() == "CronJob" {
+				suspended := gjson.Get(string(to), "spec.suspend")
+
+				if suspended.Exists() && suspended.Bool() {
+					continue
+				} else if suspended.Exists() {
+					patch = fmt.Sprintf(suspendJobPatch, "replace")
+				} else {
+					patch = fmt.Sprintf(suspendJobPatch, "add")
+				}
+			} else {
+				if int(replicaCount.Int()) == targetReplicaCount {
+					continue
+				}
+
+				if !r.hasReplicaAnnotation(inc) {
+					fmt.Println("annotation missing in ScaleActionFactory")
+					patch = fmt.Sprintf(replicaAndAnnotationPatch, targetReplicaCount, replicaAnnotation, replicaCount.Raw)
+				} else {
+					fmt.Println("annotation found in ScaleActionFactory")
+				}
+
 			}
 
 			impactedObject := pincherv1alpha1.ImpactedObject{
@@ -178,17 +190,29 @@ func (r *ResourceActionImpl) ResetScaleActionFactory(hibernator *pincherv1alpha1
 
 			currentReplicaCount := gjson.Get(string(to), "spec.replicas")
 
-			replicaCount, err := r.getOriginalReplicaCount(inc)
-			if err != nil {
-				continue
-			}
+			patch := ""
+			replicaCount := 0
+			if inc.GetKind() == "Job" || inc.GetKind() == "CronJob" {
+				patch = resumeJobPatch
+			} else {
 
-			if replicaCount == 0 && (hibernator.Spec.Action == pincherv1alpha1.Hibernate || hibernator.Spec.Action == pincherv1alpha1.Sleep) {
-				continue
-			}
+				replicaCount, err = r.getOriginalReplicaCount(inc)
+				if err != nil {
+					continue
+				}
 
-			if replicaCount == int(currentReplicaCount.Int()) {
-				continue
+				if inc.GetKind() == "HorizontalPodAutoscaler" {
+					patch = fmt.Sprintf(minReplicaPatch, replicaCount)
+				} else {
+					patch = fmt.Sprintf(replicaPatch, replicaCount)
+
+					if replicaCount == 0 && (hibernator.Spec.Action == pincherv1alpha1.Hibernate || hibernator.Spec.Action == pincherv1alpha1.Sleep) {
+						continue
+					}
+					if replicaCount == int(currentReplicaCount.Int()) {
+						continue
+					}
+				}
 			}
 
 			if err != nil {
@@ -204,12 +228,6 @@ func (r *ResourceActionImpl) ResetScaleActionFactory(hibernator *pincherv1alpha1
 				ResourceKey:   getResourceKey(inc),
 				OriginalCount: replicaCount,
 				Status:        "success",
-			}
-
-			patch := fmt.Sprintf(replicaPatch, replicaCount)
-
-			if inc.GetKind() == "HorizontalPodAutoscaler" {
-				patch = fmt.Sprintf(minReplicaPatch, replicaCount)
 			}
 
 			request := &pkg.PatchRequest{
