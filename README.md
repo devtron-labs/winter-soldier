@@ -21,7 +21,7 @@ Winter Soldier supports two type of actions on the workload
 This action can be used to delete any Kubernetes object. eg
  ```yaml
  spec:
-  action: delete
+   action: delete
 ```
 #### Sleep
 This condition can be used to change replicas of workload to 0. eg
